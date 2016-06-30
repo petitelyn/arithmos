@@ -10,8 +10,8 @@ get_variable_names <- "SELECT name_full FROM feature_name"
 variable_list <- dbGetQuery(con, get_variable_names)
 dbDisconnect(con)
 
-shinyUI(fluidPage(
-  strong(titlePanel(paste("Arithm","\U00F3","s", " v0.1",sep=""))),
+shinyUI(fluidPage(theme='bootstrap.css',
+  strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     sidebarLayout(
       sidebarPanel(
           fileInput('file', 'Upload', multiple = T),
@@ -21,8 +21,7 @@ shinyUI(fluidPage(
           actionButton('load', 'Load'),
           
           width = 3,
-          h4("Click the Process button to begin."),
-          actionButton('upload', "Process"),
+     
           
           br(),
           br(),
@@ -51,8 +50,9 @@ shinyUI(fluidPage(
                    ".shiny-output-error:before { visibility: hidden; }"
         ),
         
-        selectInput("acrossVariableSelect", "Select a Variable", variable_list, selected=NULL, multiple=F, selectize=T),
-        selectInput("chosenVariables", "Variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
+        selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
+        selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
+        actionButton('upload', "Begin"),
         
         uiOutput("title1"),
         

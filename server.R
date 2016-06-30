@@ -53,6 +53,7 @@ shinyServer(function(input, output, session) {
     get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
     study_list <- dbGetQuery(con, get_studies)[["study_name"]]
     updateSelectInput(session, "studyChoices", choices=study_list, selected=study_list)
+    dbDisconnect(con)
   })
   
   

@@ -118,6 +118,7 @@ createDatabase <- function(con) {
 
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
 if(!(dbExistsTable(con, "project"))) createDatabase(con)
+dbDisconnect(con)
 
 #helper function to check if row exists if not insert
 #could be written as a single query but all solutions I know of 
