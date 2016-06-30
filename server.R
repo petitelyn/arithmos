@@ -6,6 +6,11 @@ t1 <- 0
 t2 <- 0
 
 shinyServer(function(input, output, session) {
+  values <- reactiveValues(sessionId = NULL)
+  values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+  session$onSessionEnded(function() {
+    observe(dbDisconnect(values$con))
+  })
   
 ################################################################################################ 
   upload_files <- observeEvent(input$file,{
