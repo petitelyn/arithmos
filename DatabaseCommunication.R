@@ -138,6 +138,7 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
 addStudy <- function(con, general_info_root, study_data_root, study_name) {
   #arbitrary length because R is super slow appending in for-loop
   #may need to error check if first lines ever longer than 10
+  withProgress(message="Uploading data", {
   general_info_list <- list(length=10)
   general_info_lines <- readLines(file(general_info_root))
   #again 10 is hard coded
@@ -237,6 +238,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
   subject_pk_cache <- rep(-1, 10000)
   study_subject_pk_cache <- rep(-1, 10000)
   for (i in 1:nrow(study_file)) {
+    incProgress(1/nrow(study_file))
     if (strcmp(toString(study_file[i, "Subject#"]),   "NA") == TRUE) {
      break 
     }
@@ -267,6 +269,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
     }
     subject_pk_cache[[current_subject]] <- subject_pk
   }
+  })
 }
 
 #retrieve data from n studies with extra column "new names" for conversion to wide format

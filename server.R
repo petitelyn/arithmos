@@ -35,6 +35,23 @@ shinyServer(function(input, output, session) {
   })
   
 ################################################################################################ 
+  
+  updateStudies <- function(current_project) {
+    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    get_project_pk <- sprintf("SELECT pk FROM project WHERE project_code=\'%s\'", input$projectChoice)
+    project_pk <- dbGetQuery(con, get_project_pk)[["pk"]]
+    get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
+    study_list <- dbGetQuery(con, get_studies)[["study_name"]]
+    updateSelectInput(session, "studyChoices", choices=study_list, selected=study_list)
+    dbDisconnect(con)
+  }
+  
+  updateProjects <- function() {
+    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    project_list <- dbGetQuery(con, "SELECT project_code FROM project")[["project_code"]]
+    updateSelectInput(session, "projectChoice", choices=project_list, select=input$projectChoice)
+  }
+  
   upload_files <- observeEvent(input$file,{
     full_name_list <- input$file$name
     datapath_list <- input$file$datapath
@@ -66,25 +83,20 @@ shinyServer(function(input, output, session) {
       addStudy(con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
     }
     dbDisconnect(con)
-    print("DONE")
+    updateProjects()
+    updateStudies(input$projectChoice)
   })
   
+ 
   
   
   loadStudies <- observeEvent(input$projectChoice, {
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-    get_project_pk <- sprintf("SELECT pk FROM project WHERE project_code=\'%s\'", input$projectChoice)
-    project_pk <- dbGetQuery(con, get_project_pk)[["pk"]]
-    get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
-    study_list <- dbGetQuery(con, get_studies)[["study_name"]]
-    updateSelectInput(session, "studyChoices", choices=study_list, selected=study_list)
-    dbDisconnect(con)
+    updateStudies(input$projectChoice)
   })
   
   
   databaseSearch <- observeEvent(input$search,{
     con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-    
     search_query <- sprintf("SELECT pk FROM study WHERE study_name LIKE \'%s\'", input$databaseSearch)
     study_list  <<- dbGetQuery(con, search_query)
     if(!(nrow(study_list) == 0)) updateSelectInput(session, "databaseChoice", choices=study_list[,"pk"])
@@ -106,7 +118,6 @@ shinyServer(function(input, output, session) {
     for (i in 1:length(colnames(files))){
       files[,i] <<- as.numeric(as.character(files[,i]))
     }
-    print(files)
     updateSelectInput(session, "chosenVariables", choices=colnames(files[-c(1:2)]))
     
     dbDisconnect(con)
