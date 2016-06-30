@@ -14,21 +14,19 @@ shinyUI(fluidPage(theme='bootstrap.css',
   strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     sidebarLayout(
       sidebarPanel(
+          conditionalPanel(condition = "input.upload == false",
+                           
           fileInput('file', 'Upload', multiple = T),
           selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
           selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
           numericInput("threshold", "Missing Threshold", 0),
           actionButton('load', 'Load'),
           
-          width = 3,
-     
+          width = 3
+          ),
           
-          br(),
-          br(),
-          br(),
-          br(),
-          br(),
           
+          conditionalPanel(condition = "input.upload == true",
           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
           
           br(),
@@ -40,20 +38,23 @@ shinyUI(fluidPage(theme='bootstrap.css',
           uiOutput("help1"),
           uiOutput('select_var'),
           uiOutput("help2")
-
+          )
         
       ),
       
       mainPanel(
-        tags$style(type="text/css",
-                   ".shiny-output-error { visibility: hidden; }",
-                   ".shiny-output-error:before { visibility: hidden; }"
+        
+        
+        conditionalPanel(condition = "input.upload == false",
+                         tags$style(type="text/css",
+                                                                        ".shiny-output-error { visibility: hidden; }",
+                                                                        ".shiny-output-error:before { visibility: hidden; }"
+        ),
+        selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
+        selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10)
         ),
         
-        selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
-        selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
-        actionButton('upload', "Begin"),
-        
+        checkboxInput('upload', "Begin"),
         uiOutput("title1"),
         
         br(),
