@@ -7,15 +7,15 @@ t2 <- 0
 
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
 create_int_to_string <- "CREATE OR REPLACE FUNCTION convert_to_integer(v_input text)
-RETURNS INTEGER AS $$
-DECLARE v_int_value INTEGER DEFAULT NULL;
+RETURNS NUMERIC AS $$
+DECLARE v_numeric_value NUMERIC DEFAULT NULL;
 BEGIN
 BEGIN
-v_int_value := v_input::INTEGER;
+v_numeric_value := v_input::NUMERIC;
 EXCEPTION WHEN OTHERS THEN
 RETURN NULL;
 END;
-RETURN v_int_value;
+RETURN v_numeric_value;
 END;
 $$ LANGUAGE plpgsql;"
 
@@ -103,7 +103,12 @@ shinyServer(function(input, output, session) {
     frame <- getStudyDataFrame(con, pk_list)
     wide_format <- spread(frame, "new_name", "value")
     files <<- wide_format
+    for (i in 1:length(colnames(files))){
+      files[,i] <<- as.numeric(as.character(files[,i]))
+    }
+    print(files)
     updateSelectInput(session, "chosenVariables", choices=colnames(files[-c(1:2)]))
+    
     dbDisconnect(con)
   })
   

@@ -284,7 +284,7 @@ getStudyDataFrame <- function(con, study_pks) {
   # for (l in 1:length(feature_list)) {
   #   initial_split_string <- paste(initial_split_string, sprintf("split_part(x.value_list, ',', %i) AS \"%s\"", l, paste(feature_list[[l]], toString(study_pk))), sep=", ")
   # }
-  base_query <- "SELECT DISTINCT ON (subject_num, timepoint, name_abbrev) subject_num as \"Subject#\", category as \"Group\", convert_to_integer(value) as value,
+  base_query <- "SELECT DISTINCT ON (subject_num, timepoint, name_abbrev) subject_num as \"Subject#\", category as \"Group\", value,
                  name_abbrev || '_' || timepoint as new_name
                             FROM measurement
   JOIN subject ON subject.pk = measurement.subject_pk
