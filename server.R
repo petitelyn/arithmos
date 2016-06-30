@@ -8,6 +8,7 @@ t2 <- 0
 shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+  
   session$onSessionEnded(function() {
     observe(dbDisconnect(values$con))
   })
@@ -15,18 +16,18 @@ shinyServer(function(input, output, session) {
 ################################################################################################ 
   
   updateStudies <- function(current_project) {
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    
     get_project_pk <- sprintf("SELECT pk FROM project WHERE project_code=\'%s\'", input$projectChoice)
-    project_pk <- dbGetQuery(con, get_project_pk)[["pk"]]
+    project_pk <- dbGetQuery(values$con, get_project_pk)[["pk"]]
     get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
-    study_list <- dbGetQuery(con, get_studies)[["study_name"]]
+    study_list <- dbGetQuery(values$con, get_studies)[["study_name"]]
     updateSelectInput(session, "studyChoices", choices=study_list, selected=study_list)
-    dbDisconnect(con)
+    
   }
   
   updateProjects <- function() {
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-    project_list <- dbGetQuery(con, "SELECT project_code FROM project")[["project_code"]]
+    
+    project_list <- dbGetQuery(values$con, "SELECT project_code FROM project")[["project_code"]]
     updateSelectInput(session, "projectChoice", choices=project_list, select=input$projectChoice)
   }
   
@@ -56,11 +57,11 @@ shinyServer(function(input, output, session) {
         count <- count + 1
       }
     }
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    
     for (i in seq(1, length(csv_list), 2)) {
-      addStudy(con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
+      addStudy(values$con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
     }
-    dbDisconnect(con)
+    
     updateProjects()
     updateStudies(input$projectChoice)
   })
@@ -74,23 +75,23 @@ shinyServer(function(input, output, session) {
   
   
   databaseSearch <- observeEvent(input$search,{
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    
     search_query <- sprintf("SELECT pk FROM study WHERE study_name LIKE \'%s\'", input$databaseSearch)
-    study_list  <<- dbGetQuery(con, search_query)
+    study_list  <<- dbGetQuery(values$con, search_query)
     if(!(nrow(study_list) == 0)) updateSelectInput(session, "databaseChoice", choices=study_list[,"pk"])
-    else updateSelectInput(session, "databaseChoice", choices=dbGetQuery(con, "SELECT pk FROM study")["pk"])
-    dbDisconnect(con)
+    else updateSelectInput(session, "databaseChoice", choices=dbGetQuery(values$con, "SELECT pk FROM study")["pk"])
+    
   })
   
   loadData <- observeEvent(input$load, {
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    
     study_name_list <- input$studyChoices
     pk_list <- list()
     for (i in 1:length(study_name_list)){
       search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
-      pk_list[i] <- dbGetQuery(con, search_query)
+      pk_list[i] <- dbGetQuery(values$con, search_query)
     }
-    frame <- getStudyDataFrame(con, pk_list)
+    frame <- getStudyDataFrame(values$con, pk_list)
     wide_format <- spread(frame, "new_name", "value")
     files <<- wide_format
     for (i in 1:length(colnames(files))){
@@ -98,7 +99,7 @@ shinyServer(function(input, output, session) {
     }
     updateSelectInput(session, "chosenVariables", choices=colnames(files[-c(1:2)]))
     
-    dbDisconnect(con)
+    
   })
   
   loadVariable <- observeEvent(input$acrossVariableSelect,{
@@ -106,8 +107,8 @@ shinyServer(function(input, output, session) {
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-    info_table <- getVariableAcross(con, input$acrossVariableSelect)
+    
+    info_table <- getVariableAcross(values$con, input$acrossVariableSelect)
     for (i in 1:nrow(info_table)) {
       info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[{}\"]", '')
       info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[,]", ', ')
