@@ -14,7 +14,6 @@ shinyUI(fluidPage(
   strong(titlePanel(paste("Arithm","\U00F3","s", " v0.1",sep=""))),
     sidebarLayout(
       sidebarPanel(
-        conditionalPanel(
           fileInput('file', 'Upload', multiple = T),
           selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
           selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
@@ -42,7 +41,6 @@ shinyUI(fluidPage(
           uiOutput("help1"),
           uiOutput('select_var'),
           uiOutput("help2")
-        )
 
         
       ),
