@@ -302,15 +302,31 @@ getStudyDataFrame <- function(con, study_pks) {
   return(dbGetQuery(con, base_query))
 }
 
-#retrieve data frame of a single study in format of data spreadsheet
-getProjectDataFrame <- function(con, project_pk) {
-  get_study_pks <- sprintf("SELECT study.pk FROM project JOIN study ON study.project_pk = project.pk 
-                               WHERE project.pk = %i", project_pk)
-  study_pks <- dbGetQuery(con, get_study_pks)[['pk']]
-  frame <- getStudyDataFrame(con, study_pks[[1]])
-  for (i in 2:length(study_pks)) {
-    frame_to_merge <- getStudyDataFrame(con, study_pks[[i]])
-    frame <- merge(frame, frame_to_merge, all=TRUE)
-  }
-  frame
+getVariableAcross <- function(con, variable_name) {
+  get_variable_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
+                                lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
+                                 array_agg('(' || timepoint || ',' || count || ')') as \"(Timepoint, Samples)\" FROM 
+                                (SELECT name_full, project_code, unit, upper_limit,
+                                lower_limit, protocol_number, timepoint, count(value) as count
+                               FROM feature_name JOIN feature ON feature.feature_name_pk = feature_name.pk JOIN project_features ON 
+                               project_features.feature_pk = feature.pk JOIN project ON project.pk = project_features.project_pk JOIN feature_unit ON
+                               feature_unit.pk = feature.feature_unit_pk JOIN measurement ON measurement.feature_pk = feature.pk 
+                                WHERE name_full=\'%s\' GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, timepoint ORDER BY timepoint) t
+                               GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", variable_name)
+  
+  variable_info_table <- dbGetQuery(con, get_variable_info)
+  return(variable_info_table)
 }
+
+# #retrieve data frame of a single study in format of data spreadsheet
+# getProjectDataFrame <- function(con, project_pk) {
+#   get_study_pks <- sprintf("SELECT study.pk FROM project JOIN study ON study.project_pk = project.pk 
+#                                WHERE project.pk = %i", project_pk)
+#   study_pks <- dbGetQuery(con, get_study_pks)[['pk']]
+#   frame <- getStudyDataFrame(con, study_pks[[1]])
+#   for (i in 2:length(study_pks)) {
+#     frame_to_merge <- getStudyDataFrame(con, study_pks[[i]])
+#     frame <- merge(frame, frame_to_merge, all=TRUE)
+#   }
+#   frame
+# }

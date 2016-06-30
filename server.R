@@ -5,28 +5,6 @@ files <- NULL
 t1 <- 0
 t2 <- 0
 
-con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-create_int_to_string <- "CREATE OR REPLACE FUNCTION convert_to_integer(v_input text)
-RETURNS NUMERIC AS $$
-DECLARE v_numeric_value NUMERIC DEFAULT NULL;
-BEGIN
-BEGIN
-v_numeric_value := v_input::NUMERIC;
-EXCEPTION WHEN OTHERS THEN
-RETURN NULL;
-END;
-RETURN v_numeric_value;
-END;
-$$ LANGUAGE plpgsql;"
-
-dbGetQuery(con, create_int_to_string)
-
-dbDisconnect(con)
-
-
-
-
-
 shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
@@ -125,6 +103,16 @@ shinyServer(function(input, output, session) {
   
   loadVariable <- observeEvent(input$acrossVariableSelect,{
     updateSelectInput(session, "chosenVariables", choices=c(input$acrossVariableSelect))
+  })
+  
+  acrossVariableTable <- observeEvent(input$across, {
+    con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+    info_table <- getVariableAcross(con, input$acrossVariableSelect)
+    for (i in 1:nrow(info_table)) {
+      info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[{}\"]", '')
+      info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[,]", ', ')
+    }
+    output$acrossInfo <- renderDataTable(info_table)
   })
   
   
