@@ -66,10 +66,11 @@ shinyUI(fluidPage(theme='bootstrap.css',
                                                                         ".shiny-output-error { visibility: hidden; }",
                                                                         ".shiny-output-error:before { visibility: hidden; }"
         ),
-        selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
+        textInput("acrossVariableSelect","Search for a variable across projects"),
         actionButton("across", "Check Variable Across"),
         dataTableOutput("acrossInfo"),
-        selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10)
+        textOutput("acrossFail")
+        
         ),
         
         checkboxInput('upload', "Begin"),

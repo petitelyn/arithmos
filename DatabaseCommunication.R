@@ -311,7 +311,7 @@ getVariableAcross <- function(con, variable_name) {
                                FROM feature_name JOIN feature ON feature.feature_name_pk = feature_name.pk JOIN project_features ON 
                                project_features.feature_pk = feature.pk JOIN project ON project.pk = project_features.project_pk JOIN feature_unit ON
                                feature_unit.pk = feature.feature_unit_pk JOIN measurement ON measurement.feature_pk = feature.pk 
-                                WHERE name_full=\'%s\' GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, timepoint ORDER BY timepoint) t
+                                WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, timepoint ORDER BY timepoint) t
                                GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", variable_name)
   
   variable_info_table <- dbGetQuery(con, get_variable_info)
