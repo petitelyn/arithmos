@@ -37,6 +37,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
                            selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
                            actionButton('load', 'Load'),
+                           textOutput("loadSuccess"),
                            
                            br(),
                            
@@ -85,7 +86,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          br(),
                          dataTableOutput("acrossInfo"),
                          br(),
-                         #selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
+
                          hidden(tableOutput("merged"))
                          ),
         
