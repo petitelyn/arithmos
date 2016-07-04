@@ -85,7 +85,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          br(),
                          dataTableOutput("acrossInfo"),
                          br(),
-                         selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
+                         #selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
                          hidden(tableOutput("merged"))
                          ),
         
