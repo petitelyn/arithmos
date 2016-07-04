@@ -184,6 +184,7 @@ shinyServer(function(input, output, session) {
     info_table <- getVariableAcross(values$con, input$acrossVariableSelect)
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
+      output$acrossInfo <- renderDataTable(info_table)
       return()
     }
     output$acrossFail <- renderText("")
