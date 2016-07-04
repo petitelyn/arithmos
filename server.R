@@ -86,21 +86,24 @@ shinyServer(function(input, output, session) {
   })
   
   loadData <- observeEvent(input$load, {
+    withProgress(message="Loading data", {
+      study_name_list <- input$studyChoices
+      pk_list <- list()
+      for (i in 1:length(study_name_list)){
+        incProgress(1/length(study_name_list)+ncol(files))
+        search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
+        pk_list[i] <- dbGetQuery(values$con, search_query)
+      }
+      frame <- getStudyDataFrame(values$con, pk_list)
+      wide_format <- spread(frame, "new_name", "value")
+      files <<- wide_format
+      for (i in 1:length(colnames(files))){
+        incProgress(1/length(study_name_list)+ncol(files))
+        files[,i] <<- as.numeric(as.character(files[,i]))
+      }
+      output$loadSuccess <- renderText("Data loaded.")
 
-    study_name_list <- input$studyChoices
-    pk_list <- list()
-    for (i in 1:length(study_name_list)){
-      search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
-      pk_list[i] <- dbGetQuery(values$con, search_query)
-    }
-    frame <- getStudyDataFrame(values$con, pk_list)
-    wide_format <- spread(frame, "new_name", "value")
-    files <<- wide_format
-    for (i in 1:length(colnames(files))){
-      files[,i] <<- as.numeric(as.character(files[,i]))
-    }
-    updateSelectInput(session, "chosenVariables", choices=colnames(files[-c(1:2)]))
-
+    })
   })
   
   
