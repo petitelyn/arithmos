@@ -1,4 +1,6 @@
 library(shiny)
+library(shinyjs)
+library(shinyBS)
 library(plotly)
 
 source("DatabaseCommunication.R")
@@ -26,53 +28,66 @@ dbGetQuery(con, create_int_to_string)
 
 dbDisconnect(con)
 
-shinyUI(fluidPage(theme='bootstrap.css',
+shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     sidebarLayout(
       sidebarPanel(
-          conditionalPanel(condition = "input.upload == false",
+          conditionalPanel(condition = "input.begin == false || input.back == true",
+                           fileInput('file', 'Upload', multiple = T),
+                           selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
+                           selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
+                           actionButton('load', 'Load'),
                            
-          fileInput('file', 'Upload', multiple = T),
-          selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
-          selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
-          numericInput("threshold", "Missing Threshold", 0),
-          actionButton('load', 'Load'),
+                           br(),
+                           
+                           h3("Pre-Processing"),
+                           numericInput("col_cutoff", label = "Remove columns that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
+                           numericInput("row_cutoff", label = "Remove rows that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
+                           
+                           actionButton('preProcess', 'Process'),
+                           fluidRow(column(6,uiOutput("downloadB")),
+                                    column(3,uiOutput("viewB"))),
+                           uiOutput("proceed_text"),
+                           
+                           checkboxInput('begin', "Begin Analysis",value=F),
+                           width = 3
+                           ),
           
-          width = 3
+          conditionalPanel(condition = "input.begin == true",
+                           checkboxInput('back', "Go Back",value=F),
+                           
+                           br(),
+                           
+                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
+
+                           br(),
+                           
+                           uiOutput("choose_var"),
+                           uiOutput("help"),
+                           uiOutput('select_group_var'),
+                           uiOutput('select_func'),
+                           uiOutput("help1"),
+                           uiOutput('select_var'),
+                           uiOutput("help2")
+                           )
           ),
-          
-          
-          conditionalPanel(condition = "input.upload == true",
-          radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
-          
-          br(),
-          
-          uiOutput("choose_var"),
-          uiOutput("help"),
-          uiOutput('select_group_var'),
-          uiOutput('select_func'),
-          uiOutput("help1"),
-          uiOutput('select_var'),
-          uiOutput("help2")
-          )
-        
-      ),
       
       mainPanel(
+        conditionalPanel(condition = "input.begin == false || input.back == true",
+                         tags$style(type="text/css", 
+                                    ".shiny-output-error { visibility: hidden; }",
+                                    ".shiny-output-error:before { visibility: hidden; }"
+                                    ),
+                         selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
+                         br(),
+                         actionButton("across", "Check Variable Across"),
+                         br(),
+                         dataTableOutput("acrossInfo"),
+                         br(),
+                         selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10),
+                         hidden(tableOutput("merged"))
+                         ),
         
-        
-        conditionalPanel(condition = "input.upload == false",
-                         tags$style(type="text/css",
-                                                                        ".shiny-output-error { visibility: hidden; }",
-                                                                        ".shiny-output-error:before { visibility: hidden; }"
-        ),
-        selectInput("acrossVariableSelect", "Select a variable across projects", variable_list, selected=NULL, multiple=F, selectize=T),
-        actionButton("across", "Check Variable Across"),
-        dataTableOutput("acrossInfo"),
-        selectInput("chosenVariables", "Selected variables", NULL, selected=NULL, multiple=T, selectize=F, size=10)
-        ),
-        
-        checkboxInput('upload', "Begin"),
         uiOutput("title1"),
         
         br(),

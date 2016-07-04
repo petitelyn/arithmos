@@ -1,4 +1,6 @@
 library(shiny)
+library(shinyjs)
+library(shinyBS)
 source("helpers.R")
 #files <- read.csv("D:/analysis/Processed_Wide.csv",header = T)
 files <- NULL
@@ -84,7 +86,7 @@ shinyServer(function(input, output, session) {
   })
   
   loadData <- observeEvent(input$load, {
-    
+
     study_name_list <- input$studyChoices
     pk_list <- list()
     for (i in 1:length(study_name_list)){
@@ -98,8 +100,84 @@ shinyServer(function(input, output, session) {
       files[,i] <<- as.numeric(as.character(files[,i]))
     }
     updateSelectInput(session, "chosenVariables", choices=colnames(files[-c(1:2)]))
+
+  })
+  
+  
+  process_files <- eventReactive(input$preProcess, {
+    Dataset <- files
     
+    if("Remarks" %in% substr(names(Dataset),1,7)){
+      Dataset <- Dataset[,-which( substr(names(Dataset),1,7) == "Remarks")]
+    }
     
+    R <- 1
+    C <- 1
+    
+    while(length(R) != 0 & length(C) != 0){
+      
+      A <- apply(Dataset,2,count_missing)
+      A <- A / length(Dataset[,3])
+      C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
+      if (length(C) > 0){
+        Dataset <- Dataset[,-C]
+      }
+      
+      Dataset_var <- Dataset[,-c(1:2)]
+      
+      B <- apply(Dataset_var,1,count_missing)
+      B <- B/ length(Dataset_var[1,])
+      R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
+      if (length(R) > 0){
+        Dataset <- Dataset[-R,]
+      }
+    }
+    
+    files <<- Dataset
+    for (i in 1:length(colnames(files))){
+      files[,i] <<- as.numeric(as.character(files[,i]))
+    }
+    
+    for (j in 1:length(colnames(files))){
+      n <- length(strsplit(colnames(files)[j], " ")[[1]])
+      list_of_string <- strsplit(colnames(files)[j], " ")[[1]]
+      m <- list_of_string[1]
+      if(n > 1){
+        for (k in list_of_string[-1]){
+          m <- paste(m,k,sep=".")
+        }
+      }
+      colnames(files)[j] <<- m
+    }
+    
+    files
+  })
+  
+  output$downloadB <- renderUI({
+    process_files()
+    downloadButton("download_process", "Download merged file")
+  })
+  
+  output$download_process <- downloadHandler(
+    filename = function() {
+      paste("merged_file","csv",sep=".")
+    },
+    content <- function(file) {
+      write.csv(files, file, row.names = F)
+    }
+  )
+  
+  output$viewB <- renderUI({
+    process_files()
+    actionButton('view', 'Click to view merged file')
+  })
+  
+  observeEvent(input$view, {
+    toggle("merged")
+  })
+  
+  output$merged <- renderTable({
+    files
   })
   
   loadVariable <- observeEvent(input$acrossVariableSelect,{
@@ -116,44 +194,23 @@ shinyServer(function(input, output, session) {
     output$acrossInfo <- renderDataTable(info_table)
   })
   
+  observe({
+    if(input$back == T){
+      updateCheckboxInput(session,"begin",value=F)
+    }
+  })
+  
+  observe({
+    if(input$begin == T){
+      updateCheckboxInput(session,"back",value=F)
+    }
+  })
   
 ################################################################################################ 
   
-  processButton <- eventReactive(input$upload,{
+  processButton <- eventReactive(input$begin,{
     files
   })
-  
-  #upload_files <- eventReactive(input$upload,{
-    # if(is.null(input$file))
-    #   return()
-    # 
-    # if (input$type == 'xlsx' | input$type == 'xlsm'){
-    #   files <<- readWorksheetFromFile(input$file$datapath, header = T, sheet = 1)
-    #   for (i in 1:length(colnames(files))){
-    #     files[,i] <<- as.numeric(as.character(files[,i]))
-    #   }
-    # }
-    # 
-    # if (input$type == 'csv'){
-    #   files <<- read.csv(input$file$datapath, sep = ',', header = T)
-    #   for (i in 1:length(colnames(files))){
-    #     files[,i] <<- as.numeric(as.character(files[,i]))
-    #   }
-    # } 
-    
-  #   for (i in 1:length(colnames(files))){
-  #     files[,i] <<- as.numeric(as.character(files[,i]))
-  #   }
-  #   
-  #   files
-  # })
-
-  # output$select_all <- renderUI({
-  #   upload_files()
-  #   if(length(upload_files()) > 0){
-  #     radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
-  #   }
-  # })
   
   output$choose_var <- renderUI({
     processButton()
@@ -534,7 +591,7 @@ shinyServer(function(input, output, session) {
   makePlot3 <- function(text_size){
     variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
     group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- wide[,1,drop=F]
+    ID <- files[,1,drop=F]
     
     variable_1 <- na.omit(variable)
     group_1 <- factor(group[as.numeric(rownames(variable_1)),])
@@ -618,7 +675,7 @@ shinyServer(function(input, output, session) {
       variable <- scale(variable)
     }
     
-    p <- heatmaply(t(variable), scale='none', cexCol = 0,
+    p <- heatmaply(t(variable), scale='none', cexCol = 0, 
                    scale_fill_gradient_fun = ggplot2::scale_fill_gradientn(colors = rev(rainbow(20*10, start = 0/6, end = 4/6))),
                    distfun = function(x) dist(x,method = input$type4.2),
                    hclustfun = function(x) hclust(x,method = input$type4.3))
@@ -725,11 +782,9 @@ shinyServer(function(input, output, session) {
                                      inline = T),
                         actionButton('Get_results', 'Get results'))
   
-  lista[[3]] <- tagList(helpText("There are no sub-functions to select for Principal Component Analysis."),
-                        actionButton('Get_results', 'Get results'))
+  lista[[3]] <- tagList(actionButton('Get_results', 'Get results for PCA biplot'))
   
-  lista[[4]] <- tagList(helpText("There are no sub-functions to select for Hierarchical Clustering & Heatmaps."),
-                        actionButton('Get_results', 'Get results'))
+  lista[[4]] <- tagList(actionButton('Get_results', 'Get results'))
   
   #*****************************************#
   output$select_subfunc <- renderUI({
@@ -740,8 +795,18 @@ shinyServer(function(input, output, session) {
   
   listb <- list()
   listb[["1-1"]] <- tagList(h3("Basic Statistics Table"),
+                            uiOutput("uiExample1.1"),
+                            
+                            br(),
+                            
                             downloadButton('downloadData1.1', 'Download data'),
                             verbatimTextOutput('text1.1'))
+  
+  output$uiExample1.1 <- renderUI({
+    tipify(bsButton("pB11", "Help", icon=icon("question-circle"),  size = "extra-small"),
+           "The table displays the basic statistics, i.e. mean, sample size, std, etc.",
+           placement = "right")
+  })
   
   output$downloadData1.1 <- downloadHandler(
     filename = function() {
@@ -754,11 +819,18 @@ shinyServer(function(input, output, session) {
   })
   
   listb[["1-2"]] <- tagList(h3("Boxplot"),
+                            uiOutput("uiExample1.2"),
+                            br(),
                             uiOutput("Select_all1.2"),
                             uiOutput("Choice1.2"),
                             textInput("main1.2", "Key in the title of boxplot"),
                             downloadButton("downloadPlot1.2", "Download plot as PDF"),
                             plotOutput("plot1.2", height = "800px"))
+  
+  output$uiExample1.2 <- renderUI({
+    tipify(bsButton("pB12", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "Boxplot displays data according to its min/max value and its quartile.")
+  })
   
   output$Select_all1.2 <- renderUI({
     radioButtons("select_all1.2", paste("Select all", length(selec_var()[[1]]), "explanatory variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
@@ -792,11 +864,20 @@ shinyServer(function(input, output, session) {
   })
   
   listb[["1-3"]] <- tagList(h3("Boxplot by group"),
+                            uiOutput("uiExample1.3"),
+                            
+                            br(),
+                            
                             uiOutput("Select_all1.3"),
                             uiOutput("Choice1.3"),
                             textInput("main1.3", "Key in the title of boxplot"),
                             downloadButton("downloadPlot1.3", "Download plot as PDF"),
                             plotOutput("plot1.3", height = "800px"))
+  
+  output$uiExample1.3 <- renderUI({
+    tipify(bsButton("pB13", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "Boxplot displays data according to its min/max value and its quartile with a different colour for each group.")
+  })
   
   output$Select_all1.3 <- renderUI({
     radioButtons("select_all1.3", paste("Select all", length(selec_var()[[1]]), "explanatory variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
@@ -830,14 +911,32 @@ shinyServer(function(input, output, session) {
   })
   
   listb[["2-1"]] <- tagList(h3("Correlation Table"),
+                            uiOutput("uiExample2.1.1"),
+                            
+                            br(),
+                            
                             downloadButton('downloadData2.1.1', 'Download data'),
                             verbatimTextOutput('text2.1.1'),
                             
                             br(),
                             
                             h3("P-Value Table"),
+                            uiOutput("uiExample2.1.2"),
+                            
+                            br(),
+                            
                             downloadButton('downloadData2.1.2', 'Download data'),
                             verbatimTextOutput('text2.1.2'))
+  
+  output$uiExample2.1.1 <- renderUI({
+    tipify(bsButton("pB211", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "The table displays pairwise correlation coefficients between the variables.")
+  })
+  
+  output$uiExample2.1.2 <- renderUI({
+    tipify(bsButton("pB212", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "The table displays the p-value for the pairwise correlation coefficients.")
+  })
   
   output$downloadData2.1.1 <- downloadHandler(
     filename = function() {
@@ -860,12 +959,21 @@ shinyServer(function(input, output, session) {
   }, width = 150)
   
   listb[["2-2"]] <- tagList(h3("Correlation Matrix"),
+                            uiOutput("uiExample2.2"),
+                            
+                            br(),
+                            
                             uiOutput("Select_all2.2"),
                             uiOutput("Choice2.2"),
                             
                             textInput("main2.2", "Key in the title of correlation matrix"),
                             downloadButton('downloadPlot2.2', 'Download the plot as PDF'),
                             plotOutput("Plot2.2", height = "800px"))
+  
+  output$uiExample2.2 <- renderUI({
+    tipify(bsButton("pB22", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "The plot displays the correlation matrix with a colour gradient.")
+  })
   
   output$Select_all2.2 <- renderUI({
     radioButtons("select_all2.2", paste("Select all", length(selec_var()[[1]]), "explanatory variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
@@ -1100,16 +1208,26 @@ shinyServer(function(input, output, session) {
                           verbatimTextOutput('text3.1'),
                           
                           br(),
-                          uiOutput("Choice3.1"),
-                          uiOutput("Choice3.2"),
+                          
+                          fluidRow(
+                            column(6, uiOutput("Choice3.1")),
+                            column(6, uiOutput("Choice3.2"))
+                          ),
                           
                           br(),
 
                           h3('PCA Biplot'),
+                          uiOutput("uiExample3"),
+                          
+                          br(),
+                          
+                          hidden(verbatimTextOutput("text3.2")),
+                          
+                          br(),
+                          
                           textInput("main3", "Key in the title of PCA plot"),
                           downloadButton('downloadPlot3', 'Download the plot as pdf'),
-                          verbatimTextOutput("text3.2"),
-                          plotOutput("plot3", height = 800, width = 800, hover = "plot1_hover3", brush = "plot1_brush3"),
+                          plotOutput("plot3", height = 800, width = 1000, hover = "plot1_hover3", brush = "plot1_brush3"),
 
                           br(),
 
@@ -1119,6 +1237,15 @@ shinyServer(function(input, output, session) {
                             column(6, h4("Selected points"),
                                    verbatimTextOutput("brush_info3"))
                             ))
+  
+  observeEvent(input$Get_results, {
+    toggle("text3.2")
+  })
+  
+  output$uiExample3 <- renderUI({
+    tipify(bsButton("pB3", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "The plot displays the PCA biplot.")
+  })
   
   output$downloadData3 <- downloadHandler(
     filename = function() {
@@ -1131,15 +1258,13 @@ shinyServer(function(input, output, session) {
   )
   
   output$Choice3.1 <- renderUI({
-    radioButtons("type3.2", "Select first principal component", 
-                 choices = colnames(makeText3.1()),
-                 inline = T)
+    selectizeInput("type3.2", "Select first principal component", 
+                choices = colnames(makeText3.1()))
   })
   
   output$Choice3.2<- renderUI({
-    radioButtons("type3.3", "Select second principal component", 
-                 choices = colnames(makeText3.1())[-which(colnames(makeText3.1()) == input$type3.2)],
-                 inline = T)
+    selectizeInput("type3.3", "Select second principal component", 
+                   choices = colnames(makeText3.1())[-which(colnames(makeText3.1()) == input$type3.2)])
   })
  
   output$downloadPlot3 <- downloadHandler(
@@ -1231,10 +1356,19 @@ shinyServer(function(input, output, session) {
                           br(),
 
                           h3('Cluster Dendrogram'),
+                          uiOutput("uiExample4"),
+                          
+                          br(),
+                          
                           textInput("main4", "Key in the title of Cluster Dendrogram"),
                           downloadButton('downloadPlot4', 'Download the plot as png'),
-                          plotOutput("plot4",height = "800px"),
+                          #plotOutput("plot4",height = "800px"),
                           plotlyOutput("plot4.1",height = "800px"))
+  
+  output$uiExample4 <- renderUI({
+    tipify(bsButton("pB4", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
+           "The plot displays the HC dendrogram, which clusters similar samples and variables together.")
+  })
   
   output$downloadPlot4 <- downloadHandler(
     filename = function() {
