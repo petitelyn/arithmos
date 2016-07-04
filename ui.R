@@ -86,6 +86,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          br(),
                          dataTableOutput("acrossInfo"),
                          br(),
+
                          hidden(tableOutput("merged"))
                          ),
         

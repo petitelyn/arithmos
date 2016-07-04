@@ -687,8 +687,8 @@ shinyServer(function(input, output, session) {
     layout(p,
            title = input$main4,
            autosize = FALSE,
-           width = 800,
-           height = 800,
+           width = 1000,
+           height = 1000,
            margin = list(l = 250, r = 50, b = 250, t = 50, pad = 4)
     )
   }
@@ -1203,7 +1203,8 @@ shinyServer(function(input, output, session) {
     brushedPoints(df, input$plot1_brush2.3, xvar = input$choose_variable_2.3.2, yvar = input$choose_variable_2.3.3)
   })
   
-  listb[["3"]] <- tagList(h3('Result of principal component analysis'),
+  listb[["3"]] <- tagList(hidden(verbatimTextOutput("text3.2")),
+                          h3('Result of principal component analysis'),
                           radioButtons("type3.1", "Standardize variables?",
                                        choices = c("Yes" = 1,
                                                    "No" = 2),
@@ -1220,12 +1221,11 @@ shinyServer(function(input, output, session) {
                           
                           br(),
 
-                          h3('PCA Biplot'),
-                          uiOutput("uiExample3"),
+                          #h3('PCA Biplot'),
+                          #uiOutput("uiExample3"),
                           
-                          br(),
-                          
-                          hidden(verbatimTextOutput("text3.2")),
+                          #br(),
+                        
                           
                           br(),
                           
