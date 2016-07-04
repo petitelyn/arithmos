@@ -180,13 +180,13 @@ shinyServer(function(input, output, session) {
     files
   })
   
-  loadVariable <- observeEvent(input$acrossVariableSelect,{
-    updateSelectInput(session, "chosenVariables", choices=c(input$acrossVariableSelect))
-  })
-  
   acrossVariableTable <- observeEvent(input$across, {
-    
     info_table <- getVariableAcross(values$con, input$acrossVariableSelect)
+    if (nrow(info_table) == 0) {
+      output$acrossFail <- renderText("No results.")
+      return()
+    }
+    output$acrossFail <- renderText("")
     for (i in 1:nrow(info_table)) {
       info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[{}\"]", '')
       info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[,]", ', ')
