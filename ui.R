@@ -59,7 +59,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            
                            br(),
                            
-                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
+                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T),
 
                            br(),
                            
