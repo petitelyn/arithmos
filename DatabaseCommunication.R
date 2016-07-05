@@ -24,6 +24,13 @@ createDatabase <- function(con) {
   );"
   dbGetQuery(con, create_project)
   
+  create_timepoint <- "CREATE TABLE timepoint(
+    pk SERIAL PRIMARY KEY,
+    visit integer,
+    days integer
+  );"
+  dbGetQuery(con, create_timepoint)
+  
   create_cell_type <- "CREATE TABLE sample_type(
   sample_type text,
   pk SERIAL PRIMARY KEY
@@ -51,69 +58,58 @@ createDatabase <- function(con) {
   );"
   dbGetQuery(con, create_study)
   
+  dbGetQuery(con, "CREATE INDEX study_index ON study(project_pk)")
   
-  create_feature_name <- "CREATE TABLE feature_name(
-  pk SERIAL PRIMARY KEY,
-  name_abbrev text,
-  name_full text
-  );"
-  dbGetQuery(con, create_feature_name)
-  
-  create_feature_unit <- "CREATE TABLE feature_unit(
+  create_unit <- "CREATE TABLE variable_unit(
   pk SERIAL PRIMARY KEY,
   unit text
   );"
-  dbGetQuery(con, create_feature_unit)
+  dbGetQuery(con, create_unit)
   
-  create_feature <- "CREATE TABLE feature(
+  create_variable_name <- "CREATE TABLE variable_name(
+    pk SERIAL PRIMARY KEY,
+    name_abbrev text,
+    name_full text
+  );"
+  dbGetQuery(con, create_variable_name)
+  
+  create_variable <- "CREATE TABLE variable(
   pk SERIAL PRIMARY KEY,
   protocol_number text,
-  analysis_remark text,
   upper_limit text,
   lower_limit text,
   no_sample_available text,
-  feature_name_pk integer REFERENCES feature_name(pk),
-  feature_unit_pk integer REFERENCES feature_unit(pk)
+  variable_unit_pk integer REFERENCES variable_unit(pk),
+  variable_name_pk integer REFERENCES variable_name(pk)
   );"
-  dbGetQuery(con, create_feature)
-  
-  create_project_features <- "CREATE TABLE project_features(
-  project_pk integer REFERENCES project(pk),
-  feature_pk integer REFERENCES feature(pk),
-  PRIMARY KEY(project_pk, feature_pk)
+  dbGetQuery(con, create_variable)
+
+  create_igroup <- "CREATE TABLE igroup(
+    pk SERIAL PRIMARY KEY,
+    igroup text
   );"
-  dbGetQuery(con, create_project_features)
+  dbGetQuery(con, create_igroup)
   
   create_subject <- "CREATE TABLE subject(
   pk SERIAL PRIMARY KEY,
   subject_num integer,
-  subject_name text,
-  category integer 
+  igroup_pk integer REFERENCES igroup(pk)
   );"
   dbGetQuery(con, create_subject)
   
-  create_study_subjects <- "CREATE TABLE study_subjects(
-  study_pk integer REFERENCES study(pk),
-  subject_pk integer REFERENCES subject(pk),
-  PRIMARY KEY (study_pk, subject_pk)
-  );"
-  dbGetQuery(con, create_study_subjects)
-  
-  create_category_index <- "CREATE INDEX category ON subject(category)"
-  dbGetQuery(con, create_category_index)
+  dbGetQuery(con, "CREATE INDEX subject_index ON subject(igroup_pk)")
   
   create_measurement <- "CREATE TABLE measurement(
   pk SERIAL PRIMARY KEY,
   value text,
-  timepoint integer,
-  feature_pk integer REFERENCES feature(pk),
+  timepoint_pk integer REFERENCES timepoint(pk),
+  variable_pk integer REFERENCES variable(pk),
   subject_pk integer REFERENCES subject(pk),
   study_pk integer REFERENCES study(pk)
   );"
   dbGetQuery(con, create_measurement)
   
-  create_timepoint_index <- "CREATE INDEX timepoint ON measurement(timepoint)"
-  dbGetQuery(con, create_timepoint_index)
+  dbGetQuery(con, "CREATE INDEX measurement_index ON measurement(timepoint_pk, variable_pk, subject_pk, study_pk)")
 }
 
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
@@ -174,12 +170,12 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
   
     #arbitrary 10 again
     study_file_con <- file(study_data_root)
-    feature_attr_list <- list(length=10)
+    variable_attr_list <- list(length=10)
     study_file_lines <- readLines(study_file_con)
     lines_to_skip <- -2
     previous_line <- NULL
     name_list <- list()
-    #read the first box w/feature attributes
+    #read the first box w/variable attributes
     #hardcoded again
     for (q in 1:15) {
       lines_to_skip <- lines_to_skip + 1
@@ -193,7 +189,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
           name_list[[abbrev_names[[t]]]] <- previous_line[[match(abbrev_names[[t]], line)]]
         }
       }
-      feature_attr_list[[line[[1]]]] <- tail(line, -1)
+      variable_attr_list[[line[[1]]]] <- tail(line, -1)
       previous_line_string <- study_file_lines[[q]]
       if (strcmp(substring(previous_line_string, nchar(previous_line_string), nchar(previous_line_string)), ",") == TRUE) {
         previous_line_string <- paste(previous_line_string, ",")
@@ -202,142 +198,151 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
     }
     close(study_file_con)
     study_file <- read.csv(study_data_root, sep = ',', header = T, skip=lines_to_skip, check.names=FALSE)
-    #collect primary keys of features
-    current_features_pks <- vector(mode="integer", length=1000)
+    #collect primary keys of variables
+    current_variables_pks <- vector(mode="integer", length=1000)
   
-    #loop through all the features
+    #loop through all the variables
     measurement_names <- colnames(study_file)[which(!colnames(study_file)
                                                     %in% list("Group", "Subject#", "Remarks", "Timepoint (Visit)", "Barcode", "X"))]
     for (p in 1:length(measurement_names)) {
-      feature_name <- name_list[[measurement_names[[p]]]]
-      if (is.null(feature_name)) feature_name <- "NA"
-      feature_units <- feature_attr_list[["Units"]][[p]]
-      if (is.null(feature_units)) feature_units <- "NA"
-      feature_name <- str_replace_all(feature_name, "[[:punct:]]", "")
+      variable_name <- name_list[[measurement_names[[p]]]]
+      if (is.null(variable_name)) variable_name <- "NA"
+      variable_units <- variable_attr_list[["Units"]][[p]]
+      if (is.null(variable_units)) variable_units <- "NA"
+      variable_name <- str_replace_all(variable_name, "[[:punct:]]", "")
       
-      feature_name_pk <- checkInsert(con, "feature_name", "name_abbrev", measurement_names[[p]],
-                                     c("name_abbrev", "name_full"), c(measurement_names[[p]], feature_name))
-      feature_unit_pk <- checkInsert(con, "feature_unit", "unit", feature_units,
-                                     c("unit"), feature_units)
+      variable_name_pk <- checkInsert(con, "variable_name", "name_abbrev", measurement_names[[p]],
+                                     c("name_abbrev", "name_full"), c(measurement_names[[p]], variable_name))
+      variable_unit_pk <- checkInsert(con, "variable_unit", "unit", variable_units,
+                                     c("unit"), variable_units)
   
-      feature_protocol <- feature_attr_list[["Protocol number analysis"]][[p]]
-      if (is.null(feature_protocol)) feature_protocol <- "NA"
-      feature_lower_limit <- feature_attr_list[["Lower limit"]][[p]]
-      if (is.null(feature_lower_limit)) feature_lower_limit <- "NA"
-      feature_upper_limit <- feature_attr_list[["Upper Limit"]][[p]]
-      if (is.null(feature_upper_limit)) feature_upper_limit <- "NA"
-      feature_no_sample <- feature_attr_list[["No sample available"]][[p]]
-      if (is.null(feature_no_sample)) feature_no_sample <- "NA"
-      add_feature <- sprintf("INSERT INTO feature(protocol_number, upper_limit, lower_limit, no_sample_available,
-                             feature_name_pk, feature_unit_pk)
+      variable_protocol <- variable_attr_list[["Protocol number analysis"]][[p]]
+      if (is.null(variable_protocol)) variable_protocol <- "NA"
+      variable_lower_limit <- variable_attr_list[["Lower limit"]][[p]]
+      if (is.null(variable_lower_limit)) variable_lower_limit <- "NA"
+      variable_upper_limit <- variable_attr_list[["Upper Limit"]][[p]]
+      if (is.null(variable_upper_limit)) variable_upper_limit <- "NA"
+      variable_no_sample <- variable_attr_list[["No sample available"]][[p]]
+      if (is.null(variable_no_sample)) variable_no_sample <- "NA"
+      add_variable <- sprintf("INSERT INTO variable(protocol_number, upper_limit, lower_limit, no_sample_available,
+                             variable_name_pk, variable_unit_pk)
                              VALUES (\'%s\', \'%s\', \'%s\', \'%s\', %i, %i) RETURNING pk",
-                             feature_protocol, feature_upper_limit, feature_lower_limit, feature_no_sample,
-                            strtoi(feature_name_pk), strtoi(feature_unit_pk))
-      feature_pk <- strtoi(dbGetQuery(con, add_feature))
-      add_project_features <- sprintf("INSERT INTO project_features(project_pk, feature_pk) VALUES (%i, %i)", project_pk, feature_pk)
-  
-      dbGetQuery(con, add_project_features)
-      current_features_pks[[p]] <- feature_pk
+                             variable_protocol, variable_upper_limit, variable_lower_limit, variable_no_sample,
+                            strtoi(variable_name_pk), strtoi(variable_unit_pk))
+      variable_pk <- strtoi(dbGetQuery(con, add_variable))
+      current_variables_pks[[p]] <- variable_pk
     }
     subject_pk_cache <- list()
-    # get_subjects_in_proj <- sprintf("SELECT subject.pk, subject.subject_num FROM project JOIN study ON study.project_pk = project.pk JOIN study_subjects
-    #                                 ON study_subjects.study_pk = study.pk JOIN subject ON subject.pk = study_subjects.subject_pk
-    #                                 WHERE project.pk=%i", project_pk)
-    # subject_list <- dbGetQuery(con, get_subjects_in_proj)
+    
+    get_subjects <- sprintf("SELECT subject.pk as subject_pk, subject.subject_num FROM project JOIN study ON study.project_pk = project.pk
+                                      JOIN measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk
+                                      WHERE project.pk=%i GROUP BY subject.pk, subject.subject_num", project_pk)
+    subject_data <- dbGetQuery(con, get_subjects)
+    
+    get_groups <- sprintf("SELECT igroup.pk as igroup_pk, igroup.igroup FROM project JOIN study ON study.project_pk = project.pk
+                          JOIN measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN igroup
+                          ON igroup.pk = subject.igroup_pk WHERE project.pk=%i GROUP BY igroup.pk, igroup.igroup", project_pk)
+    group_data <- dbGetQuery(con, get_groups) 
+    
+    get_timepoints <- sprintf("SELECT timepoint.pk as timepoint_pk, timepoint.visit FROM project JOIN study ON study.project_pk = project.pk
+                              JOIN measurement ON measurement.study_pk = study.pk JOIN timepoint ON timepoint.pk = measurement.timepoint_pk
+                              WHERE project.pk=%i GROUP BY timepoint.pk, timepoint.visit", project_pk)
+    timepoint_data <- dbGetQuery(con, get_timepoints) 
+    
+    subjects <- list()
+    groups <- list()
+    timepoints <- list()
+    if (!(nrow(subject_data) == 0)) {
+      subjects <- subject_data[,"subject_pk"]
+      names(subjects) <-  as.character(subject_data[,"subject_num"])
+      groups <- group_data[,"igroup_pk"]
+      names(groups) <- as.character(group_data[,"igroup"])
+      timepoints <- timepoint_data[,"timepoint_pk"]
+      names(timepoints) <- as.character(timepoint_data[,"visit"])
+    }
     for (i in 1:nrow(study_file)) {
-      incProgress(1/nrow(study_file))
       if (strcmp(toString(study_file[i, "Subject#"]),   "NA") == TRUE) {
        break 
       }
-      current_category <- study_file[i, "Group"]
+      current_group <- as.character(study_file[i, "Group"])
       current_subject <- study_file[i, "Subject#"]
       current_timepoint <- study_file[i, "Timepoint (Visit)"]
       subject_pk <- NULL
-      tryCatch({
-        subject_pk <- subject_pk_cache[[current_subject]]
-      }, error = function(e) {
-        subject_pk <- strtoi(dbGetQuery(con, sprintf("SELECT subject.pk FROM project JOIN study ON study.project_pk = project.pk
-                                                    JOIN study_subjects ON study_subjects.study_pk = study.pk JOIN subject ON
-                                                     subject.pk = study_subjects.subject_pk
-                                                     WHERE project.pk=%i AND subject.subject_num=%i GROUP BY subject.pk", project_pk, current_subject)))
-      })
-      if (length(subject_pk) == 0) {
-        add_subject <- sprintf("INSERT INTO subject(subject_num, category)
-                               VALUES (%i, %i) RETURNING pk", current_subject, current_category)
+      if (!(current_subject %in% names(subjects))) {
+        if (!(current_group %in% names(groups))) {
+          add_group <- sprintf("INSERT INTO igroup(igroup)
+                               VALUES (\'%s\') RETURNING pk", current_group)
+          group_pk <- strtoi(dbGetQuery(con, add_group))
+          groups[[current_group]] <- group_pk
+        }
+        group_pk <- groups[[current_group]]
+        add_subject <- sprintf("INSERT INTO subject(subject_num, igroup_pk)
+                               VALUES (%i, %i) RETURNING pk", current_subject, group_pk)
         subject_pk <- strtoi(dbGetQuery(con, add_subject))
+        subjects[[toString(current_subject)]] <- subject_pk
       }
-      study_subjects_pk <- dbGetQuery(con, sprintf("SELECT study_pk, subject_pk FROM study_subjects WHERE study_pk=%i AND subject_pk=%i", study_pk, subject_pk))
-      if (length(study_subjects_pk) == 0) {
-        dbGetQuery(con, sprintf("INSERT INTO study_subjects(study_pk, subject_pk) VALUES (%i, %i)", study_pk, subject_pk))
+    
+      if (!(current_timepoint %in% names(timepoints))) {
+        add_timepoint <- sprintf("INSERT INTO timepoint(visit)
+                               VALUES (%i) RETURNING pk", current_timepoint)
+        timepoint_pk <- strtoi(dbGetQuery(con, add_timepoint))
+        timepoints[[toString(current_timepoint)]] <- timepoint_pk
       }
+      
+      subject_pk <- subjects[[toString(current_subject)]]
+      timepoint_pk <- timepoints[[toString(current_timepoint)]]
       insert_all_measurements <- ""
       for(j in 1:length(measurement_names)){
-        add_measurement <- sprintf("INSERT INTO measurement(value, timepoint, subject_pk, feature_pk, study_pk)
+        add_measurement <- sprintf("INSERT INTO measurement(value, timepoint_pk, subject_pk, variable_pk, study_pk)
                                    VALUES (\'%s\', %i, %i, %i, %i) RETURNING pk", study_file[i, measurement_names[j]],
-                                   current_timepoint, subject_pk, current_features_pks[j], study_pk)
+                                   timepoint_pk, subject_pk, current_variables_pks[j], study_pk)
         insert_all_measurements <- paste(add_measurement, ";", insert_all_measurements, sep='')
       }
       dbGetQuery(con, insert_all_measurements)
       subject_pk_cache[[current_subject]] <- subject_pk
+      incProgress(1/nrow(study_file))
     }
   })
 }
 
 #retrieve data from n studies with extra column "new names" for conversion to wide format
 getStudyDataFrame <- function(con, study_pks) {
-  # get_feature_names <- sprintf("SELECT name_abbrev
+  # get_variable_names <- sprintf("SELECT name_abbrev
   #                              FROM measurement
   #                              JOIN subject ON subject.pk = measurement.subject_pk
   #                              JOIN study ON study.pk = measurement.study_pk
-  #                              JOIN feature ON feature.pk = measurement.feature_pk JOIN feature_name ON feature_name.pk = feature.feature_name_pk
+  #                              JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
   #                              WHERE study.pk=%i
   #                              ORDER BY subject_num, timepoint", study_pk)
   # 
-  # feature_list <- unique(dbGetQuery(con, get_feature_names)[,"name_abbrev"])
+  # variable_list <- unique(dbGetQuery(con, get_variable_names)[,"name_abbrev"])
   # initial_split_string <- "SELECT x.subject_num as \"Subject#\", x.category as \"Group\", x.timepoint as \"Timepoint (Visit)\""
-  # for (l in 1:length(feature_list)) {
-  #   initial_split_string <- paste(initial_split_string, sprintf("split_part(x.value_list, ',', %i) AS \"%s\"", l, paste(feature_list[[l]], toString(study_pk))), sep=", ")
+  # for (l in 1:length(variable_list)) {
+  #   initial_split_string <- paste(initial_split_string, sprintf("split_part(x.value_list, ',', %i) AS \"%s\"", l, paste(variable_list[[l]], toString(study_pk))), sep=", ")
   # }
-  base_query <- "SELECT DISTINCT ON (subject_num, timepoint, name_abbrev) subject_num as \"Subject#\", category as \"Group\", value,
-                 name_abbrev || '_' || timepoint as new_name
-                            FROM measurement
-  JOIN subject ON subject.pk = measurement.subject_pk
-  JOIN study ON study.pk = measurement.study_pk
-  JOIN feature ON feature.pk = measurement.feature_pk
-  JOIN feature_name ON feature_name.pk = feature.feature_name_pk
-  WHERE"
+  base_query <- "SELECT DISTINCT ON (subject_num, visit, name_abbrev) subject_num as \"Subject#\", igroup as \"Group\", value,
+                  name_abbrev || '_' || visit as new_name FROM study JOIN measurement ON measurement.study_pk = study.pk 
+                  JOIN subject ON subject.pk = measurement.subject_pk JOIN igroup ON igroup.pk = subject.igroup_pk
+                  JOIN timepoint ON timepoint.pk = measurement.timepoint_pk JOIN variable ON variable.pk = measurement.variable_pk 
+                  JOIN variable_name ON variable_name.pk = variable.variable_name_pk WHERE"
   for (i in 1:length(study_pks)-1) {
     base_query <- paste(base_query, sprintf("study.pk=%i OR", strtoi(study_pks[i])))
   }
-  base_query <- paste(base_query, sprintf("study.pk=%i ORDER BY subject_num, timepoint, name_abbrev", strtoi(study_pks[length(study_pks)])))
+  base_query <- paste(base_query, sprintf("study.pk=%i ORDER BY subject_num, visit, name_abbrev", strtoi(study_pks[length(study_pks)])))
   return(dbGetQuery(con, base_query))
 }
 
 getVariableAcross <- function(con, variable_name) {
   get_variable_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
                                 lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
-                                 array_agg('(' || timepoint || ',' || count || ')') as \"(Timepoint, Samples)\" FROM 
+                                 array_agg('(' || visit || ',' || count || ')') as \"(Visit, Samples)\" FROM 
                                 (SELECT name_full, project_code, unit, upper_limit,
-                                lower_limit, protocol_number, timepoint, count(value) as count
-                               FROM feature_name JOIN feature ON feature.feature_name_pk = feature_name.pk JOIN project_features ON 
-                               project_features.feature_pk = feature.pk JOIN project ON project.pk = project_features.project_pk JOIN feature_unit ON
-                               feature_unit.pk = feature.feature_unit_pk JOIN measurement ON measurement.feature_pk = feature.pk 
-                                WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, timepoint ORDER BY timepoint) t
+                                lower_limit, protocol_number, visit, count(value) filter (WHERE value != \'nq\' AND value != \'NS\' AND value != \'na\') as count
+                                FROM project JOIN study ON study.project_pk = project.pk JOIN measurement ON measurement.study_pk = study.pk
+                                JOIN timepoint ON timepoint.pk = measurement.timepoint_pk 
+                                JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
+                                JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, visit ORDER BY visit) t
                                GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", variable_name)
-  
   variable_info_table <- dbGetQuery(con, get_variable_info)
   return(variable_info_table)
 }
-
-# #retrieve data frame of a single study in format of data spreadsheet
-# getProjectDataFrame <- function(con, project_pk) {
-#   get_study_pks <- sprintf("SELECT study.pk FROM project JOIN study ON study.project_pk = project.pk 
-#                                WHERE project.pk = %i", project_pk)
-#   study_pks <- dbGetQuery(con, get_study_pks)[['pk']]
-#   frame <- getStudyDataFrame(con, study_pks[[1]])
-#   for (i in 2:length(study_pks)) {
-#     frame_to_merge <- getStudyDataFrame(con, study_pks[[i]])
-#     frame <- merge(frame, frame_to_merge, all=TRUE)
-#   }
-#   frame
-# }

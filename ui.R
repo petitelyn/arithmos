@@ -8,7 +8,7 @@ source("DatabaseCommunication.R")
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
 get_projects <- "SELECT project_code FROM project"
 project_list <- dbGetQuery(con, get_projects)[["project_code"]]
-get_variable_names <- "SELECT name_full FROM feature_name"
+get_variable_names <- "SELECT name_full FROM variable_name"
 variable_list <- dbGetQuery(con, get_variable_names)
 
 create_int_to_string <- "CREATE OR REPLACE FUNCTION convert_to_integer(v_input text)
@@ -31,7 +31,13 @@ dbDisconnect(con)
 shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     sidebarLayout(
+      # absolutePanel(
       sidebarPanel(
+          tags$style(type="text/css", "position: fixed;
+                    bottom: 0;
+                     right: 0;
+                     width: 300px;"
+        ),
           conditionalPanel(condition = "input.begin == false || input.back == true",
                            fileInput('file', 'Upload', multiple = T),
                            selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
@@ -70,8 +76,9 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            uiOutput("help1"),
                            uiOutput('select_var'),
                            uiOutput("help2")
-                           )
-          ),
+                           ) 
+          # ), fixed=TRUE, top="10%", height="50%", left="10%", width="33%"
+      ),
       
       mainPanel(
         conditionalPanel(condition = "input.begin == false || input.back == true",
