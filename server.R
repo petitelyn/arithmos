@@ -166,7 +166,33 @@ shinyServer(function(input, output, session) {
       paste("merged_file","csv",sep=".")
     },
     content <- function(file) {
-      write.csv(files, file, row.names = F)
+      d <- data.frame()
+      size <- dim(process_files())
+      d[1:(size[1]+5),] <- NA
+      d[,1:size[2]] <- NA
+      d[1,1] <- "Name of Project:"
+      d[1,2] <- input$projectChoice
+      d[2,1] <- "Date & Time:"
+      d[2,2] <- as.character(Sys.time())
+      d[3,1] <- "Timezone:"
+      d[3,2] <- as.character(Sys.timezone())
+      d[4,1] <- "This dataset is formed by merging the following files:"
+      
+      nam <- input$studyChoices[1]
+      for (i in input$studyChoices[-1]){
+        nam <- paste(nam,"\n",i,sep = "")
+      }
+      d[4,2] <- nam
+      
+      d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                      input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                      input$col_cutoff, "% missing values.", sep = "")
+      
+      d[8,] <- colnames(process_files())
+      d[9:(size[1]+8),] <- process_files()
+      
+      colnames(d) <- rep("", length(colnames(d)))
+      write.csv(d, file, row.names = F, na="")
     }
   )
   
@@ -180,7 +206,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$merged <- renderTable({
-    files
+    process_files()
   })
   
   acrossVariableTable <- observeEvent(input$across, {
@@ -780,11 +806,25 @@ shinyServer(function(input, output, session) {
                                     choices = c("Correlation and P-Value Table" = 1,
                                                 "Correlation Matrix" = 2,
                                                 "Significance Table and Scatterplot" = 3)),
+                        uiOutput("uiExample2"),
+                        br(),
                         radioButtons("type2", "Correlation Type", 
                                      choices = c("Pearson (parametric)" = "pearson",
                                                  "Spearman (non-parametric)" = "spearman"),
                                      inline = T),
                         actionButton('Get_results', 'Get results'))
+  
+  # output$uiExample2 <- renderUI({
+  #   tipify(bsButton("pB2", "Help", icon=icon("question-circle"),  size = "extra-small"),
+  #          "Unlike spearman's correlation, pearson's correlation is more resistant to outliers.",
+  #          placement = "right")
+  # })
+  
+  output$uiExample2 <- renderUI({
+    tipify(bsButton("pB2", "Help", icon=icon("question-circle"),  size = "extra-small"),
+           "Unlike pearson correlation, spearman correlation is more resistant to outliers.",
+           placement = "right")
+  })
   
   lista[[3]] <- tagList(actionButton('Get_results', 'Get results for PCA biplot'))
   
@@ -816,7 +856,45 @@ shinyServer(function(input, output, session) {
     filename = function() {
       paste('Basic-Stats','.csv', sep='')},
     content = function(file) {
-      write.csv(makeText1.1(), file)})
+      df <- makeText1.1()
+      df <- cbind(input$choose_variable,df)
+      df[1,1] <- NA
+      d <- data.frame()
+      size <- dim(df)
+      d[1:(size[1]+5),] <-NA
+      d[,1:(size[2])] <- NA
+      d[1,1] <- "Name of Project:"
+      d[1,2] <- input$projectChoice
+      d[2,1] <- "Date & Time:"
+      d[2,2] <- as.character(Sys.time())
+      d[3,1] <- "Timezone:"
+      d[3,2] <- as.character(Sys.timezone())
+      d[4,1] <- "The data is based on the following files and variables :"
+      
+      nam <- "List of files:"
+      for (i in input$studyChoices){
+        nam <- paste(nam,"\n",i,sep = "")
+      }
+      d[4,2] <- nam
+      
+      nam1 <- "List of variables:"
+      for (i in input$choose_variable){
+        nam1 <- paste(nam1,"\n",i,sep = "")
+      }
+      d[4,3] <- nam1
+      
+      d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                      input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                      input$col_cutoff, "% missing values.", sep = "")
+      
+      d[8,] <- colnames(df)
+      d[9:(size[1]+8),] <- df
+      d[9:(size[1]+8),1] <- sort(input$choose_variable)
+      d[8,1] <- NA
+      
+      colnames(d) <- rep("", length(colnames(d)))
+      write.csv(d, file,na="",row.names=F)
+      })
   
   output$text1.1 <- renderPrint({
     makeText1.1()
