@@ -7,11 +7,14 @@ files <- NULL
 t1 <- 0
 t2 <- 0
 
+
+
 shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
   
   session$onSessionEnded(function() {
+    
     observe(dbDisconnect(values$con))
   })
   
@@ -68,6 +71,11 @@ shinyServer(function(input, output, session) {
     updateStudies(input$projectChoice)
   })
   
+  unloadData <- observeEvent(input$studyChoices, {
+    output$loadSuccess <- renderText("")
+    files <- NULL
+  })
+  
  
   
   
@@ -90,7 +98,7 @@ shinyServer(function(input, output, session) {
       study_name_list <- input$studyChoices
       pk_list <- list()
       for (i in 1:length(study_name_list)){
-        incProgress(1/length(study_name_list)+ncol(files))
+        incProgress(1/(length(study_name_list)+ncol(files)))
         search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
         pk_list[i] <- dbGetQuery(values$con, search_query)
       }
@@ -98,9 +106,10 @@ shinyServer(function(input, output, session) {
       wide_format <- spread(frame, "new_name", "value")
       files <<- wide_format
       for (i in 1:length(colnames(files))){
-        incProgress(1/length(study_name_list)+ncol(files))
+        incProgress(1/(length(study_name_list)+ncol(files)))
         files[,i] <<- as.numeric(as.character(files[,i]))
       }
+      print(files)
       output$loadSuccess <- renderText("Data loaded.")
 
     })
@@ -108,51 +117,55 @@ shinyServer(function(input, output, session) {
   
   
   process_files <- eventReactive(input$preProcess, {
-    Dataset <- files
-    
-    if("Remarks" %in% substr(names(Dataset),1,7)){
-      Dataset <- Dataset[,-which( substr(names(Dataset),1,7) == "Remarks")]
-    }
-    
-    R <- 1
-    C <- 1
-    
-    while(length(R) != 0 & length(C) != 0){
+    withProgress(message="Processing data", {
+      incProgress(1)
       
-      A <- apply(Dataset,2,count_missing)
-      A <- A / length(Dataset[,3])
-      C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
-      if (length(C) > 0){
-        Dataset <- Dataset[,-C]
+      Dataset <- files
+      
+      if("Remarks" %in% substr(names(Dataset),1,7)){
+        Dataset <- Dataset[,-which( substr(names(Dataset),1,7) == "Remarks")]
       }
       
-      Dataset_var <- Dataset[,-c(1:2)]
+      R <- 1
+      C <- 1
       
-      B <- apply(Dataset_var,1,count_missing)
-      B <- B/ length(Dataset_var[1,])
-      R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
-      if (length(R) > 0){
-        Dataset <- Dataset[-R,]
-      }
-    }
-    
-    files <<- Dataset
-    for (i in 1:length(colnames(files))){
-      files[,i] <<- as.numeric(as.character(files[,i]))
-    }
-    
-    for (j in 1:length(colnames(files))){
-      n <- length(strsplit(colnames(files)[j], " ")[[1]])
-      list_of_string <- strsplit(colnames(files)[j], " ")[[1]]
-      m <- list_of_string[1]
-      if(n > 1){
-        for (k in list_of_string[-1]){
-          m <- paste(m,k,sep=".")
+      while(length(R) != 0 & length(C) != 0){
+        
+        A <- apply(Dataset,2,count_missing)
+        A <- A / length(Dataset[,3])
+        C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
+        if (length(C) > 0){
+          Dataset <- Dataset[,-C]
+        }
+        
+        Dataset_var <- Dataset[,-c(1:2)]
+        
+        B <- apply(Dataset_var,1,count_missing)
+        B <- B/ length(Dataset_var[1,])
+        R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
+        if (length(R) > 0){
+          Dataset <- Dataset[-R,]
         }
       }
-      colnames(files)[j] <<- m
-    }
-    
+      
+      files <<- Dataset
+      for (i in 1:length(colnames(files))){
+        files[,i] <<- as.numeric(as.character(files[,i]))
+      }
+      
+      for (j in 1:length(colnames(files))){
+        n <- length(strsplit(colnames(files)[j], " ")[[1]])
+        list_of_string <- strsplit(colnames(files)[j], " ")[[1]]
+        m <- list_of_string[1]
+        if(n > 1){
+          for (k in list_of_string[-1]){
+            m <- paste(m,k,sep=".")
+          }
+        }
+        colnames(files)[j] <<- m
+      }
+      
+    })
     files
   })
   
@@ -218,8 +231,8 @@ shinyServer(function(input, output, session) {
     }
     output$acrossFail <- renderText("")
     for (i in 1:nrow(info_table)) {
-      info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[{}\"]", '')
-      info_table[i,"(Timepoint, Samples)"] <- str_replace_all(info_table[i,"(Timepoint, Samples)"],"[,]", ', ')
+      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[{}\"]", '')
+      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[,]", ', ')
     }
     output$acrossInfo <- renderDataTable(info_table)
   })
