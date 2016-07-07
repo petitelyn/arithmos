@@ -4,6 +4,7 @@ library(shinyBS)
 source("helpers.R")
 #files <- read.csv("D:/analysis/Processed_Wide.csv",header = T)
 files <- NULL
+curent_proj <- NULL
 t1 <- 0
 t2 <- 0
 
@@ -105,7 +106,7 @@ shinyServer(function(input, output, session) {
       study_name_list <- input$studyChoices
       pk_list <- list()
       for (i in 1:length(study_name_list)){
-        incProgress(1/(length(study_name_list)+ncol(files)))
+        incProgress(1/100)
         search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
         pk_list[i] <- dbGetQuery(values$con, search_query)
       }
@@ -113,18 +114,17 @@ shinyServer(function(input, output, session) {
       wide_format <- spread(frame, "new_name", "value")
       files <<- wide_format
       for (i in 1:length(colnames(files))){
-        incProgress(1/(length(study_name_list)+ncol(files)))
+        incProgress(1/length(colnames(files)))
         files[,i] <<- as.numeric(as.character(files[,i]))
       }
       output$loadSuccess <- renderText("Data loaded.")
-
+      output$currentProject <- renderText(paste("Project: ", input$projectChoice))
     })
   })
   
   
   process_files <- eventReactive(input$preProcess, {
     withProgress(message="Processing data", {
-      incProgress(1)
       
       Dataset <- files
       
@@ -134,9 +134,8 @@ shinyServer(function(input, output, session) {
       
       R <- 1
       C <- 1
-      
+      incProgress(0.25)      
       while(length(R) != 0 & length(C) != 0){
-        
         A <- apply(Dataset,2,count_missing)
         A <- A / length(Dataset[,3])
         C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
@@ -149,6 +148,7 @@ shinyServer(function(input, output, session) {
         B <- apply(Dataset_var,1,count_missing)
         B <- B/ length(Dataset_var[1,])
         R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
+        incProgress(0.25)
         if (length(R) > 0){
           Dataset <- Dataset[-R,]
         }
@@ -158,6 +158,7 @@ shinyServer(function(input, output, session) {
       for (i in 1:length(colnames(files))){
         files[,i] <<- as.numeric(as.character(files[,i]))
       }
+      incProgress(0.25)
       
       for (j in 1:length(colnames(files))){
         n <- length(strsplit(colnames(files)[j], " ")[[1]])
@@ -170,6 +171,7 @@ shinyServer(function(input, output, session) {
         }
         colnames(files)[j] <<- m
       }
+      incProgress(0.25)
       
     })
     files
@@ -222,6 +224,7 @@ shinyServer(function(input, output, session) {
   observe({
     if(input$back == T){
       updateCheckboxInput(session,"begin",value=F)
+      current_proj <<- input$projectChoice
     }
   })
   

@@ -1,5 +1,7 @@
 library(XLConnectJars)
 library(XLConnect)
+library(xlsx)
+library(readxl)
 library(psych)
 library(ggplot2)
 library(RColorBrewer)

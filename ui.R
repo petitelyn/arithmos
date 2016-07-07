@@ -22,7 +22,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
         ),
           conditionalPanel(condition = "input.begin == false || input.back == true",
                            fileInput('file', 'Upload', multiple = T),
-                           selectInput("projectChoice", "Choose a project", NULL, multiple=F, selectize=F),
+                           selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
                            selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
                            actionButton('load', 'Load'),
                            textOutput("loadSuccess"),
@@ -45,12 +45,8 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
           conditionalPanel(condition = "input.begin == true",
                            checkboxInput('back', "Go Back",value=F),
                            
-                           br(),
-                           
+                           h3(textOutput("currentProject")),
                            radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
-
-                           br(),
-                           
                            uiOutput("choose_var"),
                            uiOutput("help"),
                            uiOutput('select_group_var'),
@@ -78,17 +74,13 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          br(),
                          hidden(tableOutput("merged"))
                          ),
-        
+        conditionalPanel(condition = "input.begin == true",
+        verticalLayout(
         uiOutput("title1"),
-        
-        br(),
-        
-        uiOutput("select_subfunc"),
-        
-        br(),
-        br(),
-        
-        uiOutput("output1")
+        div(uiOutput("select_subfunc")),
+        div(uiOutput("output1"))
         )
+        )
+      )
       )
 ))
