@@ -10,22 +10,6 @@ get_projects <- "SELECT project_code FROM project"
 project_list <- dbGetQuery(con, get_projects)[["project_code"]]
 get_variable_names <- "SELECT name_full FROM variable_name"
 variable_list <- dbGetQuery(con, get_variable_names)
-
-create_int_to_string <- "CREATE OR REPLACE FUNCTION convert_to_integer(v_input text)
-RETURNS NUMERIC AS $$
-DECLARE v_numeric_value NUMERIC DEFAULT NULL;
-BEGIN
-BEGIN
-v_numeric_value := v_input::NUMERIC;
-EXCEPTION WHEN OTHERS THEN
-RETURN NULL;
-END;
-RETURN v_numeric_value;
-END;
-$$ LANGUAGE plpgsql;"
-
-dbGetQuery(con, create_int_to_string)
-
 dbDisconnect(con)
 
 shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),

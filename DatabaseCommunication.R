@@ -110,6 +110,21 @@ createDatabase <- function(con) {
   dbGetQuery(con, create_measurement)
   
   dbGetQuery(con, "CREATE INDEX measurement_index ON measurement(timepoint_pk, variable_pk, subject_pk, study_pk)")
+  
+  
+  create_int_to_string_func <- "CREATE OR REPLACE FUNCTION convert_to_integer(v_input text)
+RETURNS NUMERIC AS $$
+  DECLARE v_numeric_value NUMERIC DEFAULT NULL;
+  BEGIN
+  BEGIN
+  v_numeric_value := v_input::NUMERIC;
+  EXCEPTION WHEN OTHERS THEN
+  RETURN NULL;
+  END;
+  RETURN v_numeric_value;
+  END;
+  $$ LANGUAGE plpgsql;"
+  dbGetQuery(con, create_int_to_string_func)
 }
 
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
@@ -135,7 +150,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
   #arbitrary length because R is super slow appending in for-loop
   #may need to error check if first lines ever longer than 10
   withProgress(message=paste("Uploading ", study_name), {
-    general_info_list <- list(length=10)
+    general_info_list <- list()
     general_info_file <- file(general_info_root)
     general_info_lines <- readLines(general_info_file)
     #again 10 is hard coded
@@ -170,7 +185,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
   
     #arbitrary 10 again
     study_file_con <- file(study_data_root)
-    variable_attr_list <- list(length=10)
+    variable_attr_list <- list()
     study_file_lines <- readLines(study_file_con)
     lines_to_skip <- -2
     previous_line <- NULL
