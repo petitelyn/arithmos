@@ -52,21 +52,21 @@ shinyServer(function(input, output, session) {
     count <- 1
     #hardcoded value
     csv_list <- list(100)
+    dir.create("TEMPDIR")
     for (p in 1:length(file_name_list)) {
       for (i in 1:2) {
         convert_to_csv <- readWorksheetFromFile(datapath_list[[p]], header=F, sheet=i)
         convert_to_csv[is.na(convert_to_csv)] <- ""
-        new_file_name <- paste(file_name_list[p],"_temp",  toString(i), ".csv", sep='')
+        new_file_name <- paste("TEMPDIR", .Platform$file.sep, file_name_list[p],"_temp",  toString(i), ".csv", sep='')
         write.table(convert_to_csv, new_file_name, na='', quote=F, row.names=F, col.names=F, sep=',')
         csv_list[[count]] <- new_file_name
         count <- count + 1
       }
     }
-    
     for (i in seq(1, length(csv_list), 2)) {
       addStudy(values$con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
     }
-    
+    unlink("TEMPDIR", recursive=TRUE)
     updateProjects()
     updateStudies(input$projectChoice)
   })
@@ -109,7 +109,6 @@ shinyServer(function(input, output, session) {
         incProgress(1/(length(study_name_list)+ncol(files)))
         files[,i] <<- as.numeric(as.character(files[,i]))
       }
-      print(files)
       output$loadSuccess <- renderText("Data loaded.")
 
     })
