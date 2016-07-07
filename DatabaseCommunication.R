@@ -390,7 +390,10 @@ getVariableAcross <- function(con, search_category, search_query) {
                                 lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
                                  array_agg('(' || days || ',' || count || ')') as \"(Day, Samples)\" FROM 
                                 (SELECT name_full, project_code, unit, upper_limit,
-                                lower_limit, protocol_number, days, count(value) filter (WHERE value != \'nq\' AND value != \'NS\' AND value != \'na\') as count
+                                lower_limit, protocol_number, days, count(value) 
+                                filter (WHERE value != \'nq\' AND value != \'NQ\' AND value != \'Nq\'
+                                AND value != \'nQ\' AND value != \'NS\' AND value != \'ns\' AND value != \'Ns\' AND value != \'nS\'
+                                AND value != \'BLD\' AND value != \'bld\' AND value != \'Bld\' AND value != \'\' AND value != \'n.q.\') as count
                                 FROM project JOIN study ON study.project_pk = project.pk JOIN measurement ON measurement.study_pk = study.pk
                                 JOIN timepoint ON timepoint.pk = measurement.timepoint_pk 
                                 JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk

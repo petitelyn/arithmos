@@ -11,15 +11,11 @@ project_list <- dbGetQuery(con, get_projects)[["project_code"]]
 dbDisconnect(con)
 
 shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
-  strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
+  strong(headerPanel(list(tags$head(
+    tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
+    tags$script(src="relative_x_scrolling.js"),
     sidebarLayout(
-      # absolutePanel(
       sidebarPanel(
-          tags$style(type="text/css", "position: fixed;
-                    bottom: 0;
-                     right: 0;
-                     width: 300px;"
-        ),
           conditionalPanel(condition = "input.begin == false || input.back == true",
                            fileInput('file', 'Upload', multiple = T),
                            selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
