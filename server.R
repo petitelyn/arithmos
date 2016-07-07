@@ -8,7 +8,6 @@ t1 <- 0
 t2 <- 0
 
 
-
 shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
@@ -105,10 +104,10 @@ shinyServer(function(input, output, session) {
       frame <- getStudyDataFrame(values$con, pk_list)
       wide_format <- spread(frame, "new_name", "value")
       files <<- wide_format
-      for (i in 1:length(colnames(files))){
-        incProgress(1/(length(study_name_list)+ncol(files)))
-        files[,i] <<- as.numeric(as.character(files[,i]))
-      }
+      # for (i in 1:length(colnames(files))){
+      #   incProgress(1/(length(study_name_list)+ncol(files)))
+      #   files[,i] <<- as.numeric(as.character(files[,i]))
+      # }
       output$loadSuccess <- renderText("Data loaded.")
 
     })
@@ -148,9 +147,9 @@ shinyServer(function(input, output, session) {
       }
       
       files <<- Dataset
-      for (i in 1:length(colnames(files))){
-        files[,i] <<- as.numeric(as.character(files[,i]))
-      }
+      # for (i in 1:length(colnames(files))){
+      #   files[,i] <<- as.numeric(as.character(files[,i]))
+      # }
       
       for (j in 1:length(colnames(files))){
         n <- length(strsplit(colnames(files)[j], " ")[[1]])

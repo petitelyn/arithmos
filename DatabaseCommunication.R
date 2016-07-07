@@ -201,6 +201,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
       if (strcmp(line[[1]], "Subject#") == TRUE) {
         abbrev_names = line[which(!line %in% list("Group", "Subject#", "Remarks", "Timepoint (Visit)", "Barcode", "X"))]
         for (t in 1:length(abbrev_names)) {
+          print(abbrev_names)
           name_list[[abbrev_names[[t]]]] <- previous_line[[match(abbrev_names[[t]], line)]]
         }
       }

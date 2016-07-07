@@ -1,3 +1,4 @@
+options(java.parameters = "-Xmx4g") 
 library(XLConnectJars)
 library(XLConnect)
 library(psych)
