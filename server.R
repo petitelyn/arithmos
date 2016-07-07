@@ -63,12 +63,19 @@ shinyServer(function(input, output, session) {
         count <- count + 1
       }
     }
+    progress <- shiny::Progress$new()
+    progress$set(value=0)
+    total_studies <- length(csv_list) / 2
     for (i in seq(1, length(csv_list), 2)) {
-      addStudy(values$con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
-    }
+          study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
+          progress$inc(0, message = paste("Uploading", study_name))
+          addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
+          
+        }
     unlink("TEMPDIR", recursive=TRUE)
     updateProjects()
     updateStudies(input$projectChoice)
+    progress$close()
   })
   
   unloadData <- observeEvent(input$studyChoices, {
@@ -196,16 +203,18 @@ shinyServer(function(input, output, session) {
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    info_table <- getVariableAcross(values$con, input$acrossVariableSelect)
+    info_table <- getVariableAcross(values$con, input$acrossSearchType, input$acrossSelect)
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
       output$acrossInfo <- renderDataTable(info_table)
       return()
     }
     output$acrossFail <- renderText("")
-    for (i in 1:nrow(info_table)) {
-      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[{}\"]", '')
-      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[,]", ', ')
+    if (!(strcmp(input$acrossSearchType, "Group"))) {
+      for (i in 1:nrow(info_table)) {
+        info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[{}\"]", '')
+        info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[,]", ', ')
+      }
     }
     output$acrossInfo <- renderDataTable(info_table)
   })
