@@ -8,20 +8,14 @@ source("DatabaseCommunication.R")
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
 get_projects <- "SELECT project_code FROM project"
 project_list <- dbGetQuery(con, get_projects)[["project_code"]]
-get_variable_names <- "SELECT name_full FROM variable_name"
-variable_list <- dbGetQuery(con, get_variable_names)
 dbDisconnect(con)
 
 shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
-  strong(headerPanel(list(tags$head(tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
+  strong(headerPanel(list(tags$head(
+    tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
+    tags$script(src="relative_x_scrolling.js"),
     sidebarLayout(
-      # absolutePanel(
       sidebarPanel(
-          tags$style(type="text/css", "position: fixed;
-                    bottom: 0;
-                     right: 0;
-                     width: 300px;"
-        ),
           conditionalPanel(condition = "input.begin == false || input.back == true",
                            fileInput('file', 'Upload', multiple = T),
                            selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
@@ -48,13 +42,10 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
           
           conditionalPanel(condition = "input.begin == true",
                            checkboxInput('back', "Go Back",value=F),
-                           
-                           br(),
-                           
-                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T),
 
-                           br(),
-                           
+                           h3(textOutput("currentProject")),
+                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
+
                            uiOutput("choose_var"),
                            uiOutput("help"),
                            uiOutput('select_group_var'),
@@ -73,26 +64,22 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                                     ".shiny-output-error:before { visibility: hidden; }"
                                     ),
                          br(),
-                         textInput("acrossVariableSelect","Search for a variable across projects"),
-                         actionButton("across", "Check Variable Across"),
+                         selectInput("acrossSearchType", "Category to search across", choices=c("Group", "Variable")),
+                         textInput("acrossSelect","Search for a value across projects"),
+                         actionButton("across", "Search Across"),
                          textOutput("acrossFail"),
                          br(),
                          dataTableOutput("acrossInfo"),
                          br(),
-
                          hidden(tableOutput("merged"))
                          ),
-        
+        conditionalPanel(condition = "input.begin == true",
+        verticalLayout(
         uiOutput("title1"),
-        
-        br(),
-        
-        uiOutput("select_subfunc"),
-        
-        br(),
-        br(),
-        
-        uiOutput("output1")
+        div(uiOutput("select_subfunc")),
+        div(uiOutput("output1"))
         )
+        )
+      )
       )
 ))

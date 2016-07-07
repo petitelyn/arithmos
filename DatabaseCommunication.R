@@ -146,21 +146,49 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
 }
 
 #parse a study to db given its general info table and actual data table
-addStudy <- function(con, general_info_root, study_data_root, study_name) {
+addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress) {
   #arbitrary length because R is super slow appending in for-loop
   #may need to error check if first lines ever longer than 10
-  withProgress(message=paste("Uploading ", study_name), {
     general_info_list <- list()
     general_info_file <- file(general_info_root)
     general_info_lines <- readLines(general_info_file)
     #again 10 is hard coded
-    for (q in 1:10) {
+    index <- 0
+    for (q in 1:100) {
       #split by any number of commas to be able to account for dynamic row number
       line <- as.list(strsplit(general_info_lines[[q]], ",+")[[1]])
+      index <- q
       if (length(line) == 0) next;
       if (length(line) == 1) next;
-      if (strcmp(line[[1]], "Remarks: ") == TRUE) break;
+      if (strcmp(line[[1]], "Visit number")) {
+        index <- index + 1
+        break
+      }
       general_info_list[[line[[1]]]] <- line[[2]]
+    }
+    line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
+    visit_to_days <- list()
+    break_flag <- FALSE
+    while (!(length(line) == 0)) {
+      visit_to_days[[toString(line[[1]])]] <- line[[2]]
+      index <- index + 1
+      tryCatch({
+      line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
+      }, error = function(e) {
+        break_flag <<- TRUE
+      })
+      if (break_flag) break
+    }
+    for(name in names(visit_to_days)) {
+      if (is.na(as.numeric(name))) next
+      time_unit <- sub("[^[:alpha:]]+", "", visit_to_days[[name]])
+      if (strcmp(time_unit, "days")) {
+        visit_to_days[[name]] <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]]))
+      } else if (strcmp(time_unit, "weeks")) {
+        visit_to_days[[name]] <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]])) * 7
+      } else {
+        next
+      }
     }
     close(general_info_file)
     project_code <- general_info_list[["Study code"]][[1]]
@@ -299,8 +327,12 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
       }
     
       if (!(current_timepoint %in% names(timepoints))) {
-        add_timepoint <- sprintf("INSERT INTO timepoint(visit)
-                               VALUES (%i) RETURNING pk", current_timepoint)
+        days <- -1
+        if (toString(current_timepoint) %in% names(visit_to_days)) {
+          days <- visit_to_days[[toString(current_timepoint)]]
+        }
+        add_timepoint <- sprintf("INSERT INTO timepoint(visit, days)
+                               VALUES (%i, %i) RETURNING pk", current_timepoint, days)
         timepoint_pk <- strtoi(dbGetQuery(con, add_timepoint))
         timepoints[[toString(current_timepoint)]] <- timepoint_pk
       }
@@ -316,9 +348,8 @@ addStudy <- function(con, general_info_root, study_data_root, study_name) {
       }
       dbGetQuery(con, insert_all_measurements)
       subject_pk_cache[[current_subject]] <- subject_pk
-      incProgress(1/nrow(study_file))
+      progress$inc(1/(nrow(study_file) * total_studies))
     }
-  })
 }
 
 #retrieve data from n studies with extra column "new names" for conversion to wide format
@@ -348,17 +379,28 @@ getStudyDataFrame <- function(con, study_pks) {
   return(dbGetQuery(con, base_query))
 }
 
-getVariableAcross <- function(con, variable_name) {
-  get_variable_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
+getVariableAcross <- function(con, search_category, search_query) {
+  info_table <- NULL
+  get_info <- NULL
+  if (strcmp(search_category, "Group")) {
+    get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" FROM project JOIN study ON study.project_pk = project.pk JOIN
+                        measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN
+                        igroup ON igroup.pk = subject.igroup_pk WHERE igroup LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code", search_query)
+  } else {
+    get_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
                                 lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
-                                 array_agg('(' || visit || ',' || count || ')') as \"(Visit, Samples)\" FROM 
+                                 array_agg('(' || days || ',' || count || ')') as \"(Day, Samples)\" FROM 
                                 (SELECT name_full, project_code, unit, upper_limit,
-                                lower_limit, protocol_number, visit, count(value) filter (WHERE value != \'nq\' AND value != \'NS\' AND value != \'na\') as count
+                                lower_limit, protocol_number, days, count(value) 
+                                filter (WHERE value != \'nq\' AND value != \'NQ\' AND value != \'Nq\'
+                                AND value != \'nQ\' AND value != \'NS\' AND value != \'ns\' AND value != \'Ns\' AND value != \'nS\'
+                                AND value != \'BLD\' AND value != \'bld\' AND value != \'Bld\' AND value != \'\' AND value != \'n.q.\') as count
                                 FROM project JOIN study ON study.project_pk = project.pk JOIN measurement ON measurement.study_pk = study.pk
                                 JOIN timepoint ON timepoint.pk = measurement.timepoint_pk 
                                 JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
-                                JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, visit ORDER BY visit) t
-                               GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", variable_name)
-  variable_info_table <- dbGetQuery(con, get_variable_info)
-  return(variable_info_table)
+                                JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, days ORDER BY days) t
+                               GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", search_query)
+  }
+  info_table <- dbGetQuery(con, get_info)
+  return(info_table)
 }

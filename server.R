@@ -4,6 +4,7 @@ library(shinyBS)
 source("helpers.R")
 #files <- read.csv("D:/analysis/Processed_Wide.csv",header = T)
 files <- NULL
+curent_proj <- NULL
 t1 <- 0
 t2 <- 0
 
@@ -62,12 +63,19 @@ shinyServer(function(input, output, session) {
         count <- count + 1
       }
     }
+    progress <- shiny::Progress$new()
+    progress$set(value=0)
+    total_studies <- length(csv_list) / 2
     for (i in seq(1, length(csv_list), 2)) {
-      addStudy(values$con, csv_list[[i]], csv_list[[i+1]], strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]])
-    }
+          study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
+          progress$inc(0, message = paste("Uploading", study_name))
+          addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
+          
+        }
     unlink("TEMPDIR", recursive=TRUE)
     updateProjects()
     updateStudies(input$projectChoice)
+    progress$close()
   })
   
   unloadData <- observeEvent(input$studyChoices, {
@@ -97,7 +105,7 @@ shinyServer(function(input, output, session) {
       study_name_list <- input$studyChoices
       pk_list <- list()
       for (i in 1:length(study_name_list)){
-        incProgress(1/(length(study_name_list)+ncol(files)))
+        incProgress(1/100)
         search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
         pk_list[i] <- dbGetQuery(values$con, search_query)
       }
@@ -109,14 +117,13 @@ shinyServer(function(input, output, session) {
       #   files[,i] <<- as.numeric(as.character(files[,i]))
       # }
       output$loadSuccess <- renderText("Data loaded.")
-
+      output$currentProject <- renderText(paste("Project: ", input$projectChoice))
     })
   })
   
   
   process_files <- eventReactive(input$preProcess, {
     withProgress(message="Processing data", {
-      incProgress(1)
       
       Dataset <- files
       
@@ -126,9 +133,8 @@ shinyServer(function(input, output, session) {
       
       R <- 1
       C <- 1
-      
+      incProgress(0.25)      
       while(length(R) != 0 & length(C) != 0){
-        
         A <- apply(Dataset,2,count_missing)
         A <- A / length(Dataset[,3])
         C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
@@ -141,12 +147,14 @@ shinyServer(function(input, output, session) {
         B <- apply(Dataset_var,1,count_missing)
         B <- B/ length(Dataset_var[1,])
         R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
+        incProgress(0.25)
         if (length(R) > 0){
           Dataset <- Dataset[-R,]
         }
       }
       
       files <<- Dataset
+      incProgress(0.25)
       # for (i in 1:length(colnames(files))){
       #   files[,i] <<- as.numeric(as.character(files[,i]))
       # }
@@ -162,6 +170,7 @@ shinyServer(function(input, output, session) {
         }
         colnames(files)[j] <<- m
       }
+      incProgress(0.25)
       
     })
     files
@@ -221,16 +230,18 @@ shinyServer(function(input, output, session) {
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    info_table <- getVariableAcross(values$con, input$acrossVariableSelect)
+    info_table <- getVariableAcross(values$con, input$acrossSearchType, input$acrossSelect)
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
       output$acrossInfo <- renderDataTable(info_table)
       return()
     }
     output$acrossFail <- renderText("")
-    for (i in 1:nrow(info_table)) {
-      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[{}\"]", '')
-      info_table[i,"(Visit, Samples)"] <- str_replace_all(info_table[i,"(Visit, Samples)"],"[,]", ', ')
+    if (!(strcmp(input$acrossSearchType, "Group"))) {
+      for (i in 1:nrow(info_table)) {
+        info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[{}\"]", '')
+        info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[,]", ', ')
+      }
     }
     output$acrossInfo <- renderDataTable(info_table)
   })
@@ -238,6 +249,7 @@ shinyServer(function(input, output, session) {
   observe({
     if(input$back == T){
       updateCheckboxInput(session,"begin",value=F)
+      current_proj <<- input$projectChoice
     }
   })
   
