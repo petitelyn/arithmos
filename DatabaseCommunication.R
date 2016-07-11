@@ -13,7 +13,6 @@ connectDatabase <- function(dbname, host, user, port, password) {
 
 #connect to a postgresql database
 
-
 #create current database schema
 #should only be run once
 createDatabase <- function(con) {
@@ -52,7 +51,7 @@ createDatabase <- function(con) {
   sample_cell_condition text,
   lotnumber integer,
   lab_pk integer REFERENCES lab(pk),
-  project_pk integer REFERENCES project(pk),
+  project_pk integer REFERENCES project(pk) ON DELETE CASCADE,
   sample_type_pk integer REFERENCES sample_type(pk),
   pk SERIAL PRIMARY KEY
   );"
@@ -102,10 +101,10 @@ createDatabase <- function(con) {
   create_measurement <- "CREATE TABLE measurement(
   pk SERIAL PRIMARY KEY,
   value text,
-  timepoint_pk integer REFERENCES timepoint(pk),
-  variable_pk integer REFERENCES variable(pk),
-  subject_pk integer REFERENCES subject(pk),
-  study_pk integer REFERENCES study(pk)
+  timepoint_pk integer REFERENCES timepoint(pk) ON DELETE CASCADE,
+  variable_pk integer REFERENCES variable(pk) ON DELETE CASCADE,
+  subject_pk integer REFERENCES subject(pk) ON DELETE CASCADE,
+  study_pk integer REFERENCES study(pk) ON DELETE CASCADE
   );"
   dbGetQuery(con, create_measurement)
   
@@ -146,9 +145,12 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
 }
 
 #parse a study to db given its general info table and actual data table
-addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress) {
+addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress, error_output) {
+  
   #arbitrary length because R is super slow appending in for-loop
   #may need to error check if first lines ever longer than 10
+    return_code <- 0
+    tryCatch({
     general_info_list <- list()
     general_info_file <- file(general_info_root)
     general_info_lines <- readLines(general_info_file)
@@ -209,8 +211,14 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
                          VALUES (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %i, %i, %i, %i) RETURNING pk",
                          study_name, extraction_protocol_number, population_specs,
                          treatment_group_specs, sample_condition, strtoi(lotnumber), strtoi(project_pk), strtoi(sample_type_pk), strtoi(lab_pk))
-    study_pk <- strtoi(dbGetQuery(con, add_study))
-  
+    study_pk <- strtoi(dbGetQuery(con, add_study))},
+    error = function(e) {
+      return_code <<- -1
+    })
+   
+    if(return_code == -1) return(return_code)
+    
+    tryCatch({
     #arbitrary 10 again
     study_file_con <- file(study_data_root)
     variable_attr_list <- list()
@@ -349,7 +357,11 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       dbGetQuery(con, insert_all_measurements)
       subject_pk_cache[[current_subject]] <- subject_pk
       progress$inc(1/(nrow(study_file) * total_studies))
-    }
+    }}, error = function(e) {
+      dbGetQuery(con, sprintf("DELETE FROM study WHERE study.pk=%i", study_pk))
+      return_code <<- -1
+    })
+    return(return_code)
 }
 
 #retrieve data from n studies with extra column "new names" for conversion to wide format
