@@ -87,7 +87,8 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          verticalLayout(
                            uiOutput("title1"),
                            div(uiOutput("select_subfunc")),
-                           div(uiOutput("output1"))
+                           div(uiOutput("output1")),
+                           div(uiOutput("output2"))
                            )
                          )
         )

@@ -1072,13 +1072,8 @@ shinyServer(function(input, output, session) {
                                     label = h3("Select sub function"), 
                                     choices = c("Characterization" = 1,
                                                 "Visualization: Boxplot" = 2,
-                                                "Analysis" = 3)),
-                        selectInput("sub_subfunction",
-                                    label = NULL, 
-                                    choices = c("Significance test" = 1,
-                                                "Visualization" = 2)),
-                        br(),
-                        uiOutput("varInterest"))
+                                                "Analysis" = 3))
+                        )
   
   output$varInterest <- renderUI({
     selectInput("var_interest", label = "Select variable of interest", choices = input$choose_variable, multiple = F)
@@ -1192,7 +1187,7 @@ shinyServer(function(input, output, session) {
       d[10,1] <- NA
       
       colnames(d) <- rep("", length(colnames(d)))
-      write.csv(selec_var()[[1]], file,na="",row.names=F)
+      write.csv(d, file,na="",row.names=F)
       })
   
   output$text1.1.1 <- renderPrint({
@@ -1308,7 +1303,14 @@ shinyServer(function(input, output, session) {
     makePlot1.2(15)
   })
   
+  listb[["1-3"]] <- tagList(selectInput("sub_subfunction",
+                                          label = NULL, 
+                                          choices = c("Significance test" = 1,
+                                                      "Visualization" = 2)),
+                            uiOutput("varInterest"))
+  
   listb[["1-3-1"]] <- tagList(h3("Significance Test"),
+                              
                               actionButton("help1.3.1","Help",icon=icon("question-circle")),
                               
                               br(),
@@ -1894,5 +1896,14 @@ shinyServer(function(input, output, session) {
     }
   })
   #****************************************************************#
-
+  output$output2 <- renderUI({
+    selec_var()
+    if(selec_var()[[3]] == 1 ){
+      listb[[paste(selec_var()[[3]],input$sub_function,input$sub_subfunction,sep="-")]]
+    }
+    else{
+      return()
+    }
+  })
+  #****************************************************************#
 })
