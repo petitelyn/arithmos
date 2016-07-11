@@ -44,15 +44,24 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            checkboxInput('back', "Go Back",value=F),
 
                            h3(textOutput("currentProject")),
-                           radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
+                           br(),
+                           radioButtons("select_time", "Select variables by timepoint?", choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T),
+                           uiOutput("selectTime"),
+                           uiOutput("selectAll"),
 
                            uiOutput("choose_var"),
+                           hr(),
+                           uiOutput('select_cat_var'),
                            uiOutput("help"),
-                           uiOutput('select_group_var'),
+                           hr(),
                            uiOutput('select_func'),
                            uiOutput("help1"),
                            uiOutput('select_var'),
-                           uiOutput("help2")
+                           uiOutput("help2"),
+                           br(),
+                           uiOutput("warning1"),
+                           br(),
+                           uiOutput("warning2")                           
                            ) 
           # ), fixed=TRUE, top="10%", height="50%", left="10%", width="33%"
       ),
@@ -74,12 +83,12 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                          hidden(tableOutput("merged"))
                          ),
         conditionalPanel(condition = "input.begin == true",
-        verticalLayout(
-        uiOutput("title1"),
-        div(uiOutput("select_subfunc")),
-        div(uiOutput("output1"))
+                         verticalLayout(
+                           uiOutput("title1"),
+                           div(uiOutput("select_subfunc")),
+                           div(uiOutput("output1"))
+                           )
+                         )
         )
-        )
-      )
       )
 ))

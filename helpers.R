@@ -11,6 +11,10 @@ library(heatmaply)
 library(gplots)
 library(RPostgreSQL)
 library(tidyr)
+library(missMDA)
+library(VIM)
+library(laeken)
+library(qvalue)
 
 long <- function(file1, file2, common){
   form <- merge(file1, file2, by <- common, all = T)
@@ -64,7 +68,8 @@ count_missing <- function(dataset){
     }
     else if (i == 'nq' | i == 'NQ' | i == 'Nq' | i == "nQ" |
              i == 'NS' | i == 'ns' | i == 'Ns' | i == "nS" |
-             i == 'BLD' | i == 'bld' | i == 'Bld' | i == ""  | i == "n.q."){
+             i == 'BLD' | i == 'bld' | i == 'Bld' | i == ""  | 
+             i == "n.q." | i =='NA'){
       k <- k + 1
     }
     else{

@@ -2,7 +2,6 @@ library(shiny)
 library(shinyjs)
 library(shinyBS)
 source("helpers.R")
-#files <- read.csv("D:/analysis/Processed_Wide.csv",header = T)
 files <- NULL
 curent_proj <- NULL
 t1 <- 0
@@ -112,10 +111,6 @@ shinyServer(function(input, output, session) {
       frame <- getStudyDataFrame(values$con, pk_list)
       wide_format <- spread(frame, "new_name", "value")
       files <<- wide_format
-      # for (i in 1:length(colnames(files))){
-      #   incProgress(1/(length(study_name_list)+ncol(files)))
-      #   files[,i] <<- as.numeric(as.character(files[,i]))
-      # }
       output$loadSuccess <- renderText("Data loaded.")
       output$currentProject <- renderText(paste("Project: ", input$projectChoice))
     })
@@ -125,55 +120,43 @@ shinyServer(function(input, output, session) {
   process_files <- eventReactive(input$preProcess, {
     withProgress(message="Processing data", {
       
-      Dataset <- files
+      dataset <- files
       
-      if("Remarks" %in% substr(names(Dataset),1,7)){
-        Dataset <- Dataset[,-which( substr(names(Dataset),1,7) == "Remarks")]
+      if("Remarks" %in% substr(names(dataset),1,7)){
+        dataset <- dataset[,-which( substr(names(dataset),1,7) == "Remarks")]
       }
       
       R <- 1
       C <- 1
       incProgress(0.25)      
       while(length(R) != 0 & length(C) != 0){
-        A <- apply(Dataset,2,count_missing)
-        A <- A / length(Dataset[,3])
+        A <- apply(dataset,2,count_missing)
+        A <- A / length(dataset[,3])
         C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
         if (length(C) > 0){
-          Dataset <- Dataset[,-C]
+          dataset <- dataset[,-C]
         }
         
-        Dataset_var <- Dataset[,-c(1:2)]
+        dataset_var <- dataset[,-c(1:2)]
         
-        B <- apply(Dataset_var,1,count_missing)
-        B <- B/ length(Dataset_var[1,])
+        B <- apply(dataset_var,1,count_missing)
+        B <- B/ length(dataset_var[1,])
         R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
         incProgress(0.25)
         if (length(R) > 0){
-          Dataset <- Dataset[-R,]
+          dataset <- dataset[-R,]
         }
       }
-      
-      files <<- Dataset
+    
       incProgress(0.25)
-      # for (i in 1:length(colnames(files))){
-      #   files[,i] <<- as.numeric(as.character(files[,i]))
-      # }
-      
-      for (j in 1:length(colnames(files))){
-        n <- length(strsplit(colnames(files)[j], " ")[[1]])
-        list_of_string <- strsplit(colnames(files)[j], " ")[[1]]
-        m <- list_of_string[1]
-        if(n > 1){
-          for (k in list_of_string[-1]){
-            m <- paste(m,k,sep=".")
-          }
+      for (i in 1:length(colnames(dataset))){
+        if(gsub("^.*?_","",colnames(dataset)[i]) == -1){
+          colnames(dataset)[i] <- gsub("_.*","",colnames(dataset)[i])
         }
-        colnames(files)[j] <<- m
       }
-      incProgress(0.25)
       
     })
-    files
+    dataset
   })
   
   output$downloadB <- renderUI({
@@ -261,63 +244,148 @@ shinyServer(function(input, output, session) {
   
 ################################################################################################ 
   
-  processButton <- eventReactive(input$begin,{
-    files
+  output$selectTime <- renderUI({
+    dataset <- process_files()
+    if(input$select_time == 1){
+      d <- unique(as.numeric(gsub("^.*?_","",colnames(dataset))))
+      d <- d[!is.na(d)]
+      selectizeInput("choose_time", "Select timepoint", choices = sort(d), 
+                     multiple = T)
+    }
+  })
+  
+  output$selectAll <- renderUI({
+    dataset <- process_files()
+    if(input$select_time == 1){
+      radioButtons("select_all", "Select all variables within the timepoint?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
+    }
+    else if(input$select_time == 2){
+      radioButtons("select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
+    }
   })
   
   output$choose_var <- renderUI({
-    processButton()
-    if(length(input$Select_all) > 0){
-      if(input$Select_all == 2){
-        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames(files), 
+    dataset <- process_files()[-1]
+    if(input$select_time == 1){
+      
+      c1 <- colnames(dataset[,which(gsub("^.*?_","",colnames(dataset)) == colnames(dataset))])
+      c2 <- NULL
+      for(i in input$choose_time){
+        c2 <- c(c2,colnames(dataset[,which(gsub("^.*?_","",colnames(dataset)) == i)]))
+      }
+      
+      if(input$select_all == 2){
+        selectizeInput("choose_variable", "Select explanatory variables", choices = c(c1,c2), 
                        multiple = T)
       }
-      else if(input$Select_all == 1){
-        selectInput("choose_variable", "Select explanatory variables", choices = colnames(files[-c(1:2)]), 
-                    multiple = T, selectize = F, selected = colnames(files[-c(1:2)]), size = 10)
+      else if(input$select_all == 1){
+        selectInput("choose_variable", "Select explanatory variables", choices = c(c1,c2), 
+                    multiple = T, selectize = F, selected = c(c1,c2), size = 10)
+      }
+    }
+    
+    else{
+      if(input$select_all == 2){
+        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames(process_files())[-1], 
+                       multiple = T)
+      }
+      else if(input$select_all == 1){
+        selectInput("choose_variable", "Select explanatory variables", choices = colnames(process_files())[-1], 
+                    multiple = T, selectize = F, selected = colnames(process_files())[-1], size = 10)
       }
     }
   })
   
-  output$select_group_var <- renderUI({
-    processButton()
-    if(length(files) > 0){
-      selectizeInput("group_variable", "Select group variable", choices = colnames(files),selected = colnames(files)[2])
+  output$select_cat_var <- renderUI({
+    dataset <- process_files()[-1]
+    if(length(input$choose_variable) > 0){
+      dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
+      ave_uniq <- NULL
+      uniq_var <- NULL
+      for (i in unique(gsub("_.*","",colnames(dataset)))){
+        n <- 0
+        for (j in 1:length(colnames(dataset))){
+          if(gsub("_.*","",colnames(dataset)[j]) == i){
+            n <- n + length(unique(dataset[,j]))
+          }
+        }
+        aver <- n / length(colnames(dataset[,gsub("_.*","",colnames(dataset)) %in% i,drop = FALSE]))
+        uniq_var <- c(uniq_var,i)
+        ave_uniq <- c(ave_uniq,aver)
+      }
+      
+      df <- data.frame(ave_uniq,uniq_var,stringsAsFactors = F)
+      df <- df[order(df[,1]),]
+      
+      #Preselect suspected categorical variables
+      var_name <- NULL
+      for(i in 1:length(colnames(dataset))){
+        dataset[,i] <- as.numeric(dataset[,i])
+        if(all_missing(dataset[,i])){
+          var_name <- c(var_name,colnames(dataset)[i])
+        }
+      }
+      var_name <- unique(gsub("_.*","",var_name))
+      
+      selectizeInput("cat_variable", "Select categorical explanatory variables", choices = df[,2],selected = var_name, multiple = T)
+    }
+    else {
+      helpText("No explanatory variables are selected.")
+    }
+  })
+  
+  output$help <- renderUI({
+    dataset <- process_files()
+    dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
+    if(length(unique(gsub("_.*","",colnames(dataset)))) > 1){
+      helpText("The variables in the list above are sorted by its likelihood to be a categorical variable. 
+               Variables suspected to be categorical have been preselected.")
     }
   })
   
   output$select_func <- renderUI({
-    processButton()
-    if(length(files) > 0){
-      selectInput("main_function",
-                  "Select main function", 
-                  choices = c("Basic Statistics" = 1,
-                              "Correlation" = 2,
-                              "Principal Compoment Analysis" = 3,
-                              "Hierarchical Clustering & Heatmaps" = 4)
-                  )
-    }
+    process_files()
+    selectInput("main_function",
+                "Select main function",
+                choices = c("Statistics" = 1,
+                            "Correlation" = 2,
+                            "Principal Compoment Analysis" = 3,
+                            "Hierarchical Clustering & Heatmaps" = 4)
+                )
   })
   
   output$help1 <- renderUI({
-    processButton()
-    if(length(files) > 0){
-      helpText("Click the Select button after you have finished selecting the explanatory variables, 
-               the group variable and the main function.")
-    }
+    process_files()
+    helpText("Click the Select button after you have finished selecting the explanatory variables, 
+              the group variable and the main function.")
   })
   
   output$select_var <- renderUI({
-    processButton()
+    process_files()
     actionButton('select_variable', "Select")
   })
   
   selec_var <- eventReactive(input$select_variable,{
-    list(input$choose_variable, input$group_variable, input$main_function)
+    dataset <- process_files()[-1]
+    dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
+    exp_var <- dataset[,!gsub("_.*","",colnames(dataset)) %in% input$cat_variable,drop = FALSE]
+    cat_var <- dataset[,gsub("_.*","",colnames(dataset)) %in% input$cat_variable,drop = FALSE]
+    
+    for(i in 1:length(colnames(exp_var))){
+      exp_var[,i] <- as.numeric(exp_var[,i])
+    }
+    
+    if(length(colnames(cat_var)) > 0){
+      for(i in 1:length(colnames(cat_var))){
+        cat_var[,i] <- as.factor(as.character(cat_var[,i]))
+      }
+    }
+    
+    list(exp_var,  cat_var, input$main_function)
   })
   
   lst <- list()
-  lst[[1]] <- "Basic Statistics"
+  lst[[1]] <- "Statistics"
   lst[[2]] <- "Correlation"
   lst[[3]] <- "Principal Component Analysis"
   lst[[4]] <- "Hierarchical Clustering & Heatmaps"
@@ -325,17 +393,56 @@ shinyServer(function(input, output, session) {
   output$help2 <- renderUI({
     selec_var()
     helpText("You have selected ",length(selec_var()[[1]])," explanatory variables, ",
-             selec_var()[[2]], " as the group variable and ",lst[[as.numeric(selec_var()[[3]])]],
+             length(selec_var()[[2]]), " explanatory variables as categorical variables and ",lst[[as.numeric(selec_var()[[3]])]],
              " as the main function.")
+  })
+  
+  output$warning1 <- renderUI({
+    selec_var()
+    if(length(input$cat_variable) == 0){
+      helpText("Warning: No categorical variables are selected.")
+    }
+  })
+  
+  output$warning2 <- renderUI({
+    var_name <- NULL
+    dataset <- selec_var()[[1]]
+    for(i in 1:length(colnames(dataset))){
+      if(all_missing(dataset[,i])){
+        var_name <- c(var_name,colnames(dataset)[i])
+      }
+    }
+    var_name <- unique(gsub("_.*","",var_name))
+    
+    if(length(var_name) == 1){
+      helpText(paste("Warning: The following variable is suspected to be categorical:",var_name))
+    }
+    
+    else if(length(var_name) > 1){
+      help_text <- var_name[1]
+      for(i in 2:length(var_name)){
+        if(i == length(var_name)){
+          help_text <- paste(help_text, "&", var_name[i])
+        }
+        else{
+          help_text <- paste(help_text, ", ", var_name[i], sep = "")
+        }
+      }
+      helpText(paste("Warning: The following variables are suspected to be categorical:",help_text))
+    }
+    
+    else{
+      return()
+    }
   })
 
 ######################################################################################  
 # List of makeText and makePlot functions
 ######################################################################################  
-  #Basic Statistics Table
-  makeText1.1 <- reactive({
+  #Basic Statistics Table for explanatory variables
+  makeText1.1.1 <- reactive({
     options(digits = 3)
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <- selec_var()[[1]]
     info <- describe(variable)
     
     if (length(variable) > 1){
@@ -348,40 +455,139 @@ shinyServer(function(input, output, session) {
       Missing <- count_missing(variable[,1])
     }
     
-    info <- cbind(info[2],Missing,info[3:13])
-    info[,-6]
+    info <- cbind(info[2],Missing,info[c(3:5,8,9,10)])
+    info
+  })
+  
+  helpText1.1.1 <- function(){
+    info1 <- paste("The table below displays basic statistical information such as sample size, number of missing samples and average value.")
+    
+    cat(sprintf(info1), "\n")
+  }
+  
+  makeText1.1.2 <- reactive({
+    cat_var <- selec_var()[[2]]
+    row_names <- NULL
+    n <- NULL
+    for (i in 1:length(colnames(cat_var))){
+      a <- table(cat_var[,i])
+      row_nam <- unique(cat_var[,i])[1]
+      n_nam <- a[names(a)==unique(cat_var[,i])[1]]
+      
+      if(length(unique(cat_var[,1])) > 1){
+        for(j in unique(cat_var[,i])[-1]){
+          row_nam <- paste(row_nam,j,sep=",")
+          n_nam <- paste(n_nam,a[names(a)==j],sep=",")
+        }
+      }
+      row_nam <- paste(colnames(cat_var)[i], " (", row_nam, ") ", sep="")
+      n_nam <- paste("(",n_nam,")",sep="")
+      row_names <- c(row_names,row_nam)
+      n <- c(n,n_nam)
+    }
+    df <- data.frame(n = n)
+    rownames(df) <- row_names
+    df <- format(df, justify = "left")
+    print(df,right=F)
+  })
+  
+  helpText1.1.2 <- reactive({
+    cat_var <- selec_var()[[2]]
+    a <- table(cat_var[,1])
+    text <- paste(a[names(a)==unique(cat_var[,1])[1]],"samples for group",unique(cat_var[,1])[1])
+    if(length(unique(cat_var[,1])) > 1){
+      for(i in 2:length(unique(cat_var[,1]))){
+        if(i != length(unique(cat_var[,1]))){
+          text1 <- paste(a[names(a)==unique(cat_var[,1])[i]],"samples for group",unique(cat_var[,1])[i])
+          text <- paste(text,text1,sep=", ")
+        }
+        else{
+          text1 <- paste(a[names(a)==unique(cat_var[,1])[i]],"samples for group",unique(cat_var[,1])[i])
+          text <- paste(text," & ", text1,".",sep="")
+        }
+      }
+    }
+    info1 <- paste("The table below displays the sample size of each group for each categorical variable.")
+    info2 <- paste("")
+    info3 <- paste("For example: The variable ",colnames(cat_var)[1], " has ",text,sep="")
+    cat(sprintf(info1), "\n")
+    cat(sprintf(info2), "\n")
+    cat(sprintf(info3), "\n")
   })
   
   #Boxplot 
   makePlot1.2 <- function(text_size){
-    if(length(input$choose_variable1.2) > 0){
-      variable <- files[,colnames(files) %in% input$choose_variable1.2,drop = FALSE]
-      
-      group_var <- files[,colnames(files) %in% selec_var()[[2]],drop = FALSE]
-      variable$Group <- as.factor(group_var[,1])
-      df <- melt(variable, id.vars = "Group")
-      
-      p <- ggplot(df, aes(variable, value, fill = variable)) + 
-        geom_boxplot(width = (0.05 * length(colnames(variable)))) +
-        theme(text = element_text(size=text_size), 
-              axis.text.x = element_text(angle=45, hjust=1,margin=margin(10,0,0,0)),
-              axis.text.y = element_text(margin=margin(0,10,0,0)),
-              panel.border = element_rect(colour = "black", fill=NA, size=1),
-              axis.title.x = element_text(margin=margin(20,0,0,0)),
-              axis.title.y = element_text(margin=margin(0,20,0,0)),
-              plot.title = element_text(margin=margin(0,0,20,0)),
-              legend.key.height = unit(2.5, "line")) +
-        ggtitle(input$main1.2)
-      p
+    dataset <- selec_var()[[1]]
+    if(length(input$choose_variable1.2) > 20){
+      variable <- dataset[,colnames(dataset) %in% input$choose_variable1.2[1:20],drop = FALSE]
     }
+    else{
+      variable <- dataset[,colnames(dataset) %in% input$choose_variable1.2,drop = FALSE]
+    }
+      
+    df <- melt(variable)
+      
+    p <- ggplot(df, aes(variable, value, fill = variable)) + 
+      geom_boxplot(width = (0.05 * length(colnames(variable)))) +
+      theme(text = element_text(size=text_size), 
+            axis.text.x = element_text(angle=45, hjust=1,margin=margin(10,0,0,0)),
+            axis.text.y = element_text(margin=margin(0,10,0,0)),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            axis.title.x = element_text(margin=margin(20,0,0,0)),
+            axis.title.y = element_text(margin=margin(0,20,0,0)),
+            plot.title = element_text(margin=margin(0,0,20,0)),
+            legend.key.height = unit(2.5, "line")) +
+      ggtitle(input$main1.2)
+    p
   }
+  
+  helpText1.2 <- function(){
+    info1 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of non-categorical variables.")
+    info2 <- paste("")
+    info3 <- paste("For vizualization, recommended number of variables selected should not exceed 20.")
+    info4 <- paste("If more than 20 variables are selected, only the first 20 will be plotted.")
+    cat(sprintf(info1), "\n")
+    cat(sprintf(info2), "\n")
+    cat(sprintf(info3), "\n")
+    cat(sprintf(info4), "\n")
+  }
+  
+  makeText1.3.1 <- reactive({
+    dataset <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    
+    #Y(numeric) vs X(numeric)
+    if(input$var_interest %in% selec_var()[[1]]){
+      dataset <- selec_var()[[1]]
+      varInterest <- dataset[,colnames(dataset) %in% input$var_interest, drop =F]
+      var_name <- NULL
+      rho <- NULL
+      p_value <- NULL
+      q_value <- NULL
+      r_squared <- NULL
+      n <- NULL
+      for(i in input$choose_variable){
+        if(i %in% colnames(selec_var()[[1]]) $ i != input$var_interest){
+          v <- dataset[,colnames(dataset) %in% i, drop =F]
+          a <- cor.test(var_Interest,v,alternative = "two.sided",method = "spearman")
+          var_name <- c(var_name,i)
+          p-value <- c(p-value, a$p.value)
+          rho <- c(rho, a$estimate)
+          r_squared <- c(r_squared, a$estimate)
+          n <- c(n, length(na.omit(cbind(var_name,v))[,1]))
+        }
+      }
+      q_value <- qvalue(p = pvalues)$qvalues
+      #df <- data.frame(n = n, rho = rho, P-value = p_value, Q-value = q_value, R-squared = r_squared)
+    }
+  })
   
   #Boxplot by group
   makePlot1.3 <- function(text_size){
     if(length(input$choose_variable1.3) > 0){
-      variable <- files[,colnames(files) %in% input$choose_variable1.3,drop = FALSE]
+      variable <- process_files()[,colnames(process_files()) %in% input$choose_variable1.3,drop = FALSE]
       
-      group_var <- files[,colnames(files) %in% selec_var()[[2]],drop = FALSE]
+      group_var <- process_files()[,colnames(process_files()) %in% selec_var()[[2]],drop = FALSE]
       variable$Group <- as.factor(group_var[,1])
       df <- melt(variable, id.vars = "Group")
       
@@ -401,14 +607,14 @@ shinyServer(function(input, output, session) {
   
   #Correlation Table
   makeText2.1.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <- process_files()[,colnames(process_files()) %in% selec_var()[[1]],drop = FALSE]
     info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
     info
   }
   
   #P Value Table
   makeText2.1.2 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <- process_files()[,colnames(process_files()) %in% selec_var()[[1]],drop = FALSE]
     p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
     p.mat
   }
@@ -424,7 +630,7 @@ shinyServer(function(input, output, session) {
         r <- "rho"
       }
       
-      variable <- files[,colnames(files) %in% input$choose_variable2.2,drop = FALSE]
+      variable <- process_files()[,colnames(process_files()) %in% input$choose_variable2.2,drop = FALSE]
       
       info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
       p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
@@ -533,7 +739,7 @@ shinyServer(function(input, output, session) {
     
     n <- NULL
     for(i in rownames(makeText2.1.2())){
-      df <- files[,colnames(files) %in% c(input$choose_variable_2.3.1,i)]
+      df <- process_files()[,colnames(process_files()) %in% c(input$choose_variable_2.3.1,i)]
       df <- na.omit(df)
       n <- c(n,length(rownames(df)))
     }
@@ -567,9 +773,9 @@ shinyServer(function(input, output, session) {
   
   #Scatterplot
   makePlot2.3 <- function(text_size){
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <- process_files()[,colnames(process_files()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- process_files()[,colnames(process_files()) %in% selec_var()[[2]], drop = FALSE]
+    ID <- process_files()[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -618,20 +824,48 @@ shinyServer(function(input, output, session) {
     p
   }
   
+  #PCA Biplot Results
+  makeText3.2 <- reactive({
+    x <- makeText3.1()[3,which(colnames(makeText3.1()) == input$type3.2)]
+    x <- round((x*100),1)
+    y <- makeText3.1()[3,which(colnames(makeText3.1()) == input$type3.3)]
+    y <- round((y*100),1)
+    info1 <- paste("The principal component on the x axis explains", paste(x,"%", sep = ""), "of the total variation of the variables.")
+    info2 <- paste("The principal component on the y axis explains", paste(y,"%", sep = ""),  "of the total variation of the variables.")
+    
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
+    
+    rownames(variable) <- process_files()[,1]
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+    
+    count <- 2
+    info <- cbind(info1, info2)
+    for (i in unique(group[,1])){
+      count <- count + 1
+      n <- length(which(group[,1] == i))
+      text <- paste("Number of samples remaining in group",i,":",n)
+      info <- cbind(info,text)
+    }
+    
+    cat(info, sep = "\n")
+    
+  })
+  
   #PCA Results
   makeText3.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
+    variable <- selec_var()[[1]][-194]
     
-    variable_1 <- na.omit(variable)
-    group_1 <<- factor(group[as.numeric(rownames(variable_1)),])
+    rownames(variable) <- process_files()[,1]
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
-      var.pca <- prcomp(variable_1, center = TRUE, scale. = TRUE) 
+      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     }
     
     if(input$type3.1 == 2){
-      var.pca <- prcomp(variable_1, center = FALSE, scale. = FALSE) 
+      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
     }
     
     info <- summary(var.pca)
@@ -640,33 +874,48 @@ shinyServer(function(input, output, session) {
     newinfo
   }
   
+  helpText3 <- function(){
+    info1 <- paste("PCA computes the variables into principal components, which are sorted accordingly to the proportion of variance it explains.")
+    info2 <- paste("")
+    info3 <- paste("If there are more than 10 principal componetns, only the first 10 will be shown in the table.")
+    info4 <- paste("Download the table to view all of them.")
+    info5 <- paste("")
+    info6 <- paste("Standardization accounts for the different units and variation of the variables.")
+    info7 <- paste("")
+    info8 <- paste("Selection of group variables determines the colour of each sample in the biplot.")
+    cat(sprintf(info1), "\n")
+    cat(sprintf(info2), "\n")
+    cat(sprintf(info3), "\n")
+    cat(sprintf(info4), "\n")
+    cat(sprintf(info5), "\n")
+    cat(sprintf(info6), "\n")
+    cat(sprintf(info7), "\n")
+    cat(sprintf(info8), "\n")
+  }
+  
   #PCA Biplot
   makePlot3 <- function(text_size){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop=F]
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
     
-    variable_1 <- na.omit(variable)
-    group_1 <- factor(group[as.numeric(rownames(variable_1)),])
-    ID_1 <- ID[as.numeric(rownames(variable_1)),]
-    
+    rownames(variable) <- process_files()[,1]
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+
     if(input$type3.1 == 1){
-      var.pca <- prcomp(variable_1, center = TRUE, scale. = TRUE) 
+      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     }
     
     if(input$type3.1 == 2){
-      var.pca <- prcomp(variable_1, center = FALSE, scale. = FALSE) 
+      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
     }
-    
-    df <- data.frame(cbind(ID_1,group_1,var.pca$x))
-    df[,2] <- as.factor(df[,2])
-    
+   
     g <- ggbiplot(var.pca, varname.size = 4, obs.scale = 1, var.scale = 1,
                   choices = c(as.numeric(str_sub(input$type3.2,3)),
                               as.numeric(str_sub(input$type3.3,3))),
-                  group = group_1, ellipse = TRUE,
+                  groups = group1, ellipse = TRUE,
                   circle = F) +
-      geom_point(aes(color=group_1, size = 3)) + scale_size_identity() +
+      geom_point(aes(color=group1, size = 3)) + scale_size_identity() +
       theme(legend.direction = 'vertical', legend.position = 'right',
             legend.key.height = unit(2.5, "line"),
             text = element_text(size=text_size),
@@ -681,48 +930,37 @@ shinyServer(function(input, output, session) {
     g
   }
   
-  #PCA Biplot Results
-  makeText3.2 <- reactive({
-    x <- makeText3.1()[3,which(colnames(makeText3.1()) == input$type3.2)]
-    x <- round((x*100),1)
-    y <- makeText3.1()[3,which(colnames(makeText3.1()) == input$type3.3)]
-    y <- round((y*100),1)
-    info1 <- paste("The principal component on the x axis explains", paste(x,"%", sep = ""), "of the total variation of the variables.")
-    info2 <- paste("The principal component on the y axis explains", paste(y,"%", sep = ""),  "of the total variation of the variables.")
-    
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    variable_1 <- na.omit(variable)
-    group_1 <<- factor(group[as.numeric(rownames(variable_1)),])
-    df <- cbind(group_1,variable_1)
-    
-    count <- 2
-    info <- cbind(info1, info2)
-    for (i in unique(group[,1])){
-      count <- count + 1
-      n <- length(which(df[,1] == i))
-      text <- paste("Number of samples remaining in group",i,":",n)
-      info <- cbind(info,text)
-    }
-    
-    cat(info, sep = "\n")
-    
-  })
+  helpText4 <- function(){
+    info1 <- paste("The plot displays the HC dendrogram, which clusters similar samples and variables together.")
+    info2 <- paste("")
+    info3 <- paste("Standardization accounts for the different units and variation of the variables.")
+    info4 <- paste("")
+    info5 <- paste("Selection of group variables determines the label colour of each sample in the dendrogram.")
+    cat(sprintf(info1), "\n")
+    cat(sprintf(info2), "\n")
+    cat(sprintf(info3), "\n")
+    cat(sprintf(info4), "\n")
+    cat(sprintf(info5), "\n")
+    # cat(sprintf(info6), "\n")
+    # cat(sprintf(info7), "\n")
+    # cat(sprintf(info8), "\n")
+  }
   
   #Interactive heatmap
   makePlot4.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group1 <<- group[,which(colnames(group) %in% input$choose_group4)]
+    if(class(group1) != "data.frame"){
+      group1 <- data.frame(group1)
+    }
     
-    nam <- files[,colnames(files) %in% colnames(files)[1], drop = FALSE]
+    rownames(variable) <- process_files()[,1]
     
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    group[,1] <- as.factor(group[,1])
-    
-    group$nam <- nam[,1]
-    
-    rownames(variable) <- paste(nam[,1],group[,1],sep=".")
-    
-    variable <- na.omit(variable)
+    variable <- kNN(variable, k = 5,numFun = weightedMean, weightDist=TRUE)
+    n_col <- length(colnames(variable))
+    n_col <- n_col / 2
+    variable <- variable[,1:n_col]
     
     if(input$type4.1 == 1){
       variable <- scale(variable)
@@ -744,16 +982,19 @@ shinyServer(function(input, output, session) {
   
   #Non-interactive heatmap
   makePlot4.2 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group1 <- group[,which(colnames(group) %in% input$choose_group4),drop=F]
+    if(class(group1) != "data.frame"){
+      group1 <- data.frame(group1)
+    }
     
-    nam <- files[,colnames(files) %in% colnames(files)[1], drop = FALSE]
+    rownames(variable) <- process_files()[,1]
     
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    group[,1] <- as.factor(group[,1])
-    
-    rownames(variable) <- nam[,1]
-    
-    variable <- na.omit(variable)
+    variable <- kNN(variable, k = 5,numFun = weightedMean, weightDist=TRUE)
+    n_col <- length(colnames(variable))
+    n_col <- n_col / 2
+    variable <- variable[,1:n_col]
     
     if(input$type4.1 == 1){
       variable <- scale(variable)
@@ -765,14 +1006,14 @@ shinyServer(function(input, output, session) {
                    distfun = function(x) dist(x,method = input$type4.2),
                    hclustfun = function(x) hclust(x,method = input$type4.3))
     
-    g_name <- nam
-    g_colour <- rep(0,length(group[,1]))
+    g_name <- process_files()[,1,drop=F]
+    g_colour <- rep(0,length(group1[,1]))
     
     col <- brewer.pal(12,"Paired")
     
-    for (i in 1:length(unique(group[,1]))){
-      for (j in 1:length(group[,1])){
-        if(group[,1][j] == unique(group[,1])[i]){
+    for (i in 1:length(unique(group1[,1]))){
+      for (j in 1:length(group1[,1])){
+        if(group1[,1][j] == unique(group1[,1])[i]){
           g_colour[j] <- col[i]
         }
       }
@@ -790,8 +1031,8 @@ shinyServer(function(input, output, session) {
       }
     }
     
-    leg <- as.character(unique(group[,1]))
-    fil <- col[1:length(unique(group[,1]))]
+    leg <- as.character(unique(group1[,1]))
+    fil <- col[1:length(unique(group1[,1]))]
     
     my_palette <- rev(rainbow(20*10, start = 0/6, end = 4/6))
     
@@ -819,10 +1060,19 @@ shinyServer(function(input, output, session) {
   lista <- list()
   lista[[1]] <- tagList(selectInput("sub_function",
                                     label = h3("Select sub function"), 
-                                    choices = c("Basic Statistics" = 1,
-                                                "Boxplot" = 2,
-                                                "Boxplot by group" = 3)),
-                        actionButton('Get_results', 'Get results'))
+                                    choices = c("Characterization" = 1,
+                                                "Visualization: Boxplot" = 2,
+                                                "Analysis" = 3)),
+                        selectInput("sub_subfunction",
+                                    label = NULL, 
+                                    choices = c("Significance test" = 1,
+                                                "Visualization" = 2)),
+                        br(),
+                        uiOutput("varInterest"))
+  
+  output$varInterest <- renderUI({
+    selectInput("var_interest", label = "Select variable of interest", choices = input$choose_variable, multiple = F)
+  })
   
   lista[[2]] <- tagList(selectInput("sub_function",
                                     label = h3("Select sub function"),
@@ -837,19 +1087,13 @@ shinyServer(function(input, output, session) {
                                      inline = T),
                         actionButton('Get_results', 'Get results'))
   
-  # output$uiExample2 <- renderUI({
-  #   tipify(bsButton("pB2", "Help", icon=icon("question-circle"),  size = "extra-small"),
-  #          "Unlike spearman's correlation, pearson's correlation is more resistant to outliers.",
-  #          placement = "right")
-  # })
-  
   output$uiExample2 <- renderUI({
     tipify(bsButton("pB2", "Help", icon=icon("question-circle"),  size = "extra-small"),
            "Unlike pearson correlation, spearman correlation is more resistant to outliers.",
            placement = "right")
   })
   
-  lista[[3]] <- tagList(actionButton('Get_results', 'Get results for PCA biplot'))
+  lista[[3]] <- tagList(actionButton('getPCA', 'Get results for PCA biplot'))
   
   lista[[4]] <- tagList(actionButton('Get_results', 'Get results'))
   
@@ -861,26 +1105,46 @@ shinyServer(function(input, output, session) {
   #*****************************************#
   
   listb <- list()
-  listb[["1-1"]] <- tagList(h3("Basic Statistics Table"),
-                            uiOutput("uiExample1.1"),
+  listb[["1-1"]] <- tagList(h3("Statistics Table for Explanatory Variables"),
+                            actionButton("help1.1.1","Help",icon=icon("question-circle")),
                             
                             br(),
                             
-                            downloadButton('downloadData1.1', 'Download data'),
-                            verbatimTextOutput('text1.1'))
+                            hidden(verbatimTextOutput("helptext1.1.1")),
+                            
+                            br(),
+                            
+                            downloadButton('downloadData1.1.1', 'Download data'),
+                            verbatimTextOutput('text1.1.1'),
+                            
+                            br(),
+                            
+                            h3("Statistics Table for Categorical Variables"),
+                            actionButton("help1.1.2","Help",icon=icon("question-circle")),
+                            
+                            br(),
+                            
+                            hidden(verbatimTextOutput("helptext1.1.2")),
+                            
+                            br(),
+                            
+                            downloadButton('downloadData1.1.2', 'Download data'),
+                            verbatimTextOutput('text1.1.2'))
   
-  output$uiExample1.1 <- renderUI({
-    tipify(bsButton("pB11", "Help", icon=icon("question-circle"),  size = "extra-small"),
-           "The table displays the basic statistics, i.e. mean, sample size, std, etc.",
-           placement = "right")
+  observeEvent(input$help1.1.1, {
+    toggle("helptext1.1.1")
   })
   
-  output$downloadData1.1 <- downloadHandler(
+  output$helptext1.1.1 <- renderPrint({
+    helpText1.1.1()
+  })
+  
+  output$downloadData1.1.1 <- downloadHandler(
     filename = function() {
-      paste('Basic-Stats','.csv', sep='')},
+      paste('exp_stats','.csv', sep='')},
     content = function(file) {
-      df <- makeText1.1()
-      df <- cbind(input$choose_variable,df)
+      df <- makeText1.1.1()
+      df <- cbind(rownames(df),df)
       df[1,1] <- NA
       d <- data.frame()
       size <- dim(df)
@@ -892,7 +1156,7 @@ shinyServer(function(input, output, session) {
       d[2,2] <- as.character(Sys.time())
       d[3,1] <- "Timezone:"
       d[3,2] <- as.character(Sys.timezone())
-      d[4,1] <- "The data is based on the following files and variables :"
+      d[4,1] <- "The data is based on the following process_files() and variables :"
       
       nam <- "List of files:"
       for (i in input$studyChoices){
@@ -910,50 +1174,116 @@ shinyServer(function(input, output, session) {
                       input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
                       input$col_cutoff, "% missing values.", sep = "")
       
-      d[8,] <- colnames(df)
-      d[9:(size[1]+8),] <- df
-      d[9:(size[1]+8),1] <- sort(input$choose_variable)
-      d[8,1] <- NA
+      d[8,1] <- paste("Title: Statistics Table for Explanatory Variables")
+      
+      d[10,] <- colnames(df)
+      d[11:(size[1]+10),] <- df
+      d[11:(size[1]+10),1] <- rownames(df)
+      d[10,1] <- NA
+      
+      colnames(d) <- rep("", length(colnames(d)))
+      write.csv(selec_var()[[1]], file,na="",row.names=F)
+      })
+  
+  output$text1.1.1 <- renderPrint({
+    makeText1.1.1()
+  })
+  
+  observeEvent(input$help1.1.2, {
+    toggle("helptext1.1.2")
+  })
+  
+  output$helptext1.1.2 <- renderPrint({
+    helpText1.1.2()
+  })
+  
+  output$downloadData1.1.2 <- downloadHandler(
+    filename = function() {
+      paste('cat_stats','.csv', sep='')},
+    content = function(file) {
+      df <- makeText1.1.2()
+      d <- data.frame()
+      size <- dim(df)
+      d[1:(size[1]+5),] <-NA
+      d[,1:(size[2])] <- NA
+      d[1,1] <- "Name of Project:"
+      d[1,2] <- input$projectChoice
+      d[2,1] <- "Date & Time:"
+      d[2,2] <- as.character(Sys.time())
+      d[3,1] <- "Timezone:"
+      d[3,2] <- as.character(Sys.timezone())
+      d[4,1] <- "The data is based on the following process_files() and variables :"
+      
+      nam <- "List of files:"
+      for (i in input$studyChoices){
+        nam <- paste(nam,"\n",i,sep = "")
+      }
+      d[4,2] <- nam
+      
+      nam1 <- "List of variables:"
+      for (i in input$choose_variable){
+        nam1 <- paste(nam1,"\n",i,sep = "")
+      }
+      d[4,3] <- nam1
+      
+      d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                      input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                      input$col_cutoff, "% missing values.", sep = "")
+      
+      d[8,1] <- paste("Title: Statistics Table for Categorical Variables")
+      
+      d[10,2] <- "n"
+      d[11:(size[1]+10),2] <- makeText1.1.2()
+      d[11:(size[1]+10),1] <- rownames(df)
+      d[10,1] <- NA
       
       colnames(d) <- rep("", length(colnames(d)))
       write.csv(d, file,na="",row.names=F)
-      })
+    })
   
-  output$text1.1 <- renderPrint({
-    makeText1.1()
+  output$text1.1.2 <- renderPrint({
+    makeText1.1.2()
   })
   
   listb[["1-2"]] <- tagList(h3("Boxplot"),
-                            uiOutput("uiExample1.2"),
+                            actionButton("help1.2","Help",icon=icon("question-circle")),
+                            
+                            br(),
+                            
+                            hidden(verbatimTextOutput("helptext1.2")),
+                            
                             br(),
                             uiOutput("Select_all1.2"),
                             uiOutput("Choice1.2"),
                             textInput("main1.2", "Key in the title of boxplot"),
                             downloadButton("downloadPlot1.2", "Download plot as PDF"),
-                            plotOutput("plot1.2", height = "800px"))
+                            plotOutput("plot1.2", height = "1000px"))
   
-  output$uiExample1.2 <- renderUI({
-    tipify(bsButton("pB12", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
-           "Boxplot displays data according to its min/max value and its quartile.")
+  observeEvent(input$help1.2, {
+    toggle("helptext1.2")
+  })
+  
+  output$helptext1.2 <- renderPrint({
+    helpText1.2()
   })
   
   output$Select_all1.2 <- renderUI({
-    radioButtons("select_all1.2", paste("Select all", length(selec_var()[[1]]), "explanatory variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
+    radioButtons("select_all1.2", paste("Select all", length(selec_var()[[1]]), "non-categorical variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
   })
   
   output$Choice1.2 <- renderUI({
     if(input$select_all1.2 == 2){
-      selectizeInput("choose_variable1.2", "Select variables for the boxplot", choices = selec_var()[[1]], 
+      selectizeInput("choose_variable1.2", "Select variables for the boxplot", choices = colnames(selec_var()[[1]]), 
                      multiple = T)
     }
     else if(input$select_all1.2 == 1){
       if(length(selec_var()[[1]]) > 10){
-        selectInput("choose_variable1.2", "Select variables for the boxplot", choices = selec_var()[[1]], 
-                    multiple = T, selectize = F, selected = selec_var()[[1]], size = 10)
+        selectInput("choose_variable1.2", "Select variables for the boxplot", choices = colnames(selec_var()[[1]]), 
+                    multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = 10)
       }
       else{
-        selectInput("choose_variable1.2", "Select variables for the boxplot", choices = selec_var()[[1]], 
-                    multiple = T, selectize = F, selected = selec_var()[[1]], size = length(selec_var()[[1]]))
+        selectInput("choose_variable1.2", "Select variables for the boxplot", choices = colnames(selec_var()[[1]]), 
+                    multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = length(selec_var()[[1]]))
       }
     }
   })
@@ -962,22 +1292,36 @@ shinyServer(function(input, output, session) {
     filename = function() {
       paste('Boxplot','.pdf', sep='')},
     content = function(file) {
-      ggsave(file, makePlot1.2(25), dpi = 300, width = 30, height = 50, units = "cm")})
+      ggsave(file, makePlot1.2(15), dpi = 300, width = 30, height = 35, units = "cm")})
   
   output$plot1.2 <- renderPlot({
     makePlot1.2(15)
   })
   
-  listb[["1-3"]] <- tagList(h3("Boxplot by group"),
-                            uiOutput("uiExample1.3"),
-                            
-                            br(),
-                            
-                            uiOutput("Select_all1.3"),
-                            uiOutput("Choice1.3"),
-                            textInput("main1.3", "Key in the title of boxplot"),
-                            downloadButton("downloadPlot1.3", "Download plot as PDF"),
-                            plotOutput("plot1.3", height = "800px"))
+  listb[["1-3-1"]] <- tagList(h3("Significance Test"),
+                              actionButton("help1.3.1","Help",icon=icon("question-circle")),
+                              
+                              br(),
+                              
+                              hidden(verbatimTextOutput("helptext1.3.1")),
+                              
+                              br(),
+                              
+                              h4("Table for explanatory variable"),
+                              verbatimTextOutput("text1.3.1"),
+                              
+                              br(),
+                              
+                              h4("Table for categorical variables"),
+                              uiOutput("text1.3.2"))
+  
+  output$text1.3.1 <- renderPrint({
+    makeText1.3.1()
+  })
+  
+  output$text1.3.1 <- renderPrint({
+    makeText1.3.2()
+  })
   
   output$uiExample1.3 <- renderUI({
     tipify(bsButton("pB13", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
@@ -1271,9 +1615,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$hover_info2.3<- renderPrint({
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <- process_files()[,colnames(process_files()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- process_files()[,colnames(process_files()) %in% selec_var()[[2]], drop = FALSE]
+    ID <- process_files()[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1288,9 +1632,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$brush_info2.3 <- renderPrint({
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <- process_files()[,colnames(process_files()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- process_files()[,colnames(process_files()) %in% selec_var()[[2]], drop = FALSE]
+    ID <- process_files()[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1306,6 +1650,14 @@ shinyServer(function(input, output, session) {
   
   listb[["3"]] <- tagList(hidden(verbatimTextOutput("text3.2")),
                           h3('Result of principal component analysis'),
+                          actionButton("help3","Help",icon=icon("question-circle")),
+                          
+                          br(),
+                          
+                          hidden(verbatimTextOutput("helptext3")),
+                          
+                          br(),
+                          
                           radioButtons("type3.1", "Standardize variables?",
                                        choices = c("Yes" = 1,
                                                    "No" = 2),
@@ -1321,18 +1673,12 @@ shinyServer(function(input, output, session) {
                           ),
                           
                           br(),
-
-                          #h3('PCA Biplot'),
-                          #uiOutput("uiExample3"),
-                          
-                          #br(),
-                        
-                          
                           br(),
                           
-                          textInput("main3", "Key in the title of PCA plot"),
+                          fluidRow(column(6,textInput("main3", "Key in the title of PCA plot")),
+                                   column(6,uiOutput("chooseGroup3"))),
                           downloadButton('downloadPlot3', 'Download the plot as pdf'),
-                          plotOutput("plot3", height = 800, width = 1000, hover = "plot1_hover3", brush = "plot1_brush3"),
+                          plotOutput("plot3", height = 800, width = 800, hover = "plot1_hover3", brush = "plot1_brush3"),
 
                           br(),
 
@@ -1343,14 +1689,27 @@ shinyServer(function(input, output, session) {
                                    verbatimTextOutput("brush_info3"))
                             ))
   
-  observeEvent(input$Get_results, {
+  observeEvent(input$getPCA, {
     toggle("text3.2")
   })
   
-  output$uiExample3 <- renderUI({
-    tipify(bsButton("pB3", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
-           "The plot displays the PCA biplot.")
+  output$text3.2 <- renderPrint({
+    makeText3.2()
   })
+  
+  observeEvent(input$help3, {
+    toggle("helptext3")
+  })
+  
+  output$helptext3 <- renderPrint({
+    helpText3()
+  })
+  
+  output$chooseGroup3 <- renderUI({
+    selectizeInput("choose_group3", "Select group variable",
+                   choices = colnames(selec_var()[[2]]), multiple = F)
+  })
+  
   
   output$downloadData3 <- downloadHandler(
     filename = function() {
@@ -1359,7 +1718,12 @@ shinyServer(function(input, output, session) {
       write.csv(makeText3.1(), file)})
   
   output$text3.1<- renderPrint(
-    makeText3.1()
+    if(length(colnames(makeText3.1())) > 10){
+      makeText3.1()[,1:10]
+    }
+    else{
+      makeText3.1()
+    }
   )
   
   output$Choice3.1 <- renderUI({
@@ -1376,64 +1740,68 @@ shinyServer(function(input, output, session) {
     filename = function() {
       paste('PCA Biplot','.pdf', sep='')},
     content = function(file) {
-      ggsave(file, makePlot3(20), dpi = 300, height = 30, width = 30, units = "cm")})
-  
-  output$text3.2 <- renderPrint({
-    makeText3.2()
-  })
+      ggsave(file, makePlot3(15), dpi = 300, height = 30, width = 30, units = "cm")})
   
   output$plot3 <- renderPlot({
     makePlot3(15)
   })
   
   output$hover_info3 <- renderPrint({
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop = FALSE]
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
     
-    variable_1 <- na.omit(variable)
-    group_1 <- factor(group[as.numeric(rownames(variable_1)),])
-    ID_1 <- ID[as.numeric(rownames(variable_1)),]
+    rownames(variable) <- process_files()[,1]
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
-      var.pca <- prcomp(variable_1, center = TRUE, scale. = TRUE) 
+      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     }
     
     if(input$type3.1 == 2){
-      var.pca <- prcomp(variable_1, center = FALSE, scale. = FALSE) 
+      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
     }
     
-    df <- cbind(ID_1,group_1,variable_1,var.pca$x)
     
-    colnames(df)[1:2] <- c("ID", "Group")
+    df <- cbind(process_files()[,1],group,variable,var.pca$x)
+    
+    colnames(df)[1:2] <- c("Subject#", input$choose_group3)
     
     nearPoints(df, input$plot1_hover3, xvar = input$type3.2, yvar = input$type3.3, threshold = 10, maxpoints = 1)[,c(1:2)]
   })
   
   output$brush_info3 <- renderPrint({
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop = FALSE]
+    variable <- selec_var()[[1]]
+    group <- selec_var()[[2]]
+    group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
     
-    variable_1 <- na.omit(variable)
-    group_1 <- factor(group[as.numeric(rownames(variable_1)),])
-    ID_1 <- ID[as.numeric(rownames(variable_1)),]
+    rownames(variable) <- process_files()[,1]
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
-      var.pca <- prcomp(variable_1, center = TRUE, scale. = TRUE) 
+      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     }
     
     if(input$type3.1 == 2){
-      var.pca <- prcomp(variable_1, center = FALSE, scale. = FALSE) 
+      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
     }
     
-    df <- cbind(ID_1,group_1,variable_1,var.pca$x)
-    colnames(df)[1:2] <- c("ID", "Group")
+    
+    df <- cbind(process_files()[,1],group,variable,var.pca$x)
+    
+    colnames(df)[1:2] <- c("Subject#", input$choose_group3)
     
     brushedPoints(df, input$plot1_brush3, xvar = input$type3.2, yvar = input$type3.3)[,c(1:2)]
   })
   
-  listb[["4"]] <- tagList(h3("Results of Hierarchical Clustering & Heatmaps"),
+  listb[["4"]] <- tagList(h3("Hierarchical Clustering & Heatmaps"),
+                          actionButton("help4","Help",icon=icon("question-circle")),
+                          
+                          br(),
+                          
+                          hidden(verbatimTextOutput("helptext4")),
+                          
+                          br(),
                           radioButtons("type4.1", "Standardize variable?",
                                        choices = c("Yes" = 1,
                                                    "No" = 2),
@@ -1457,6 +1825,7 @@ shinyServer(function(input, output, session) {
                                          "Centroid" = "centroid"),
                                        selected = "ward",
                                        inline = T),
+                          uiOutput("chooseGroup4"),
                          
                           br(),
 
@@ -1467,12 +1836,25 @@ shinyServer(function(input, output, session) {
                           
                           textInput("main4", "Key in the title of Cluster Dendrogram"),
                           downloadButton('downloadPlot4', 'Download the plot as png'),
-                          #plotOutput("plot4",height = "800px"),
-                          plotlyOutput("plot4.1",height = "800px"))
+                          plotOutput("plot4",height = "800px",width = "1000px"))
+                          #plotlyOutput("plot4.1",height = "800px"))
   
   output$uiExample4 <- renderUI({
     tipify(bsButton("pB4", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
            "The plot displays the HC dendrogram, which clusters similar samples and variables together.")
+  })
+  
+  observeEvent(input$help4, {
+    toggle("helptext4")
+  })
+  
+  output$helptext4 <- renderPrint({
+    helpText4()
+  })
+  
+  output$chooseGroup4 <- renderUI({
+    selectizeInput("choose_group4", "Select group variable",
+                   choices = colnames(selec_var()[[2]]), multiple = F)
   })
   
   output$downloadPlot4 <- downloadHandler(

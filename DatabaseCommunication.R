@@ -332,7 +332,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
           days <- visit_to_days[[toString(current_timepoint)]]
         }
         add_timepoint <- sprintf("INSERT INTO timepoint(visit, days)
-                               VALUES (%i, %i) RETURNING pk", current_timepoint, days)
+                               VALUES (%s, %s) RETURNING pk", current_timepoint, days)
         timepoint_pk <- strtoi(dbGetQuery(con, add_timepoint))
         timepoints[[toString(current_timepoint)]] <- timepoint_pk
       }
