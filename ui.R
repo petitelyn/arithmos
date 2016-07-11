@@ -14,6 +14,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(
     tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     tags$script(src="relative_x_scrolling.js"),
+    h2(textOutput("currentProject")),
     sidebarLayout(
       sidebarPanel(
           conditionalPanel(condition = "input.begin == false || input.back == true",
@@ -44,7 +45,6 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
           conditionalPanel(condition = "input.begin == true",
                            checkboxInput('back', "Go Back",value=F),
 
-                           h3(textOutput("currentProject")),
                            br(),
                            radioButtons("select_time", "Select variables by timepoint?", choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T),
                            uiOutput("selectTime"),
@@ -64,7 +64,6 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            br(),
                            uiOutput("warning2")                           
                            ) 
-          # ), fixed=TRUE, top="10%", height="50%", left="10%", width="33%"
       ),
       
       mainPanel(
