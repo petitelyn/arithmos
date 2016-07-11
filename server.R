@@ -2,8 +2,6 @@ library(shiny)
 library(shinyjs)
 library(shinyBS)
 source("helpers.R")
-#files <- read.csv("D:/analysis/Processed_Wide.csv",header = T)
-files <- NULL
 curent_proj <- NULL
 t1 <- 0
 t2 <- 0
@@ -13,6 +11,7 @@ t2 <- 0
 shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+  values$data <- NULL
   
   session$onSessionEnded(function() {
     
@@ -37,19 +36,21 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "projectChoice", choices=project_list, select=input$projectChoice)
   }
   
-  upload_files <- observeEvent(input$file,{
+  upload_data  <- observeEvent(input$file,{
+    output$uploadError <- renderText("")
     full_name_list <- input$file$name
     datapath_list <- input$file$datapath
     file_name_list <- list(100)
     for (j in 1:length(full_name_list)){
       file_split <- strsplit(full_name_list[[j]], "\\.")[[1]]
       file_type <- file_split[[2]]
-      if (!(strcmp(file_type, "xlsm") == TRUE)) {
-        print("Incorrect file type: Need two sheets, first with general info second with the data")
+      if (!(strcmp(file_type, "xlsm"))) {
+        output$uploadError <- renderText("Can only upload .xlsm")
         return()
       }
       file_name_list[[j]] <- file_split[[1]]
     }
+    
     count <- 1
     #hardcoded value
     csv_list <- list(100)
@@ -64,15 +65,26 @@ shinyServer(function(input, output, session) {
         count <- count + 1
       }
     }
+    
+    if (length(csv_list) != 2*length(file_name_list)) {
+      output$uploadError("Every .xlsm must be two sheets, with study info first and data second")
+      unlink("TEMPDIR", recursive=TRUE)
+      return()
+    }
+    
+    
     progress <- shiny::Progress$new()
     progress$set(value=0)
     total_studies <- length(csv_list) / 2
     for (i in seq(1, length(csv_list), 2)) {
-          study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
-          progress$inc(0, message = paste("Uploading", study_name))
-          addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
-          
-        }
+      study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
+      progress$inc(0, message = paste("Uploading", study_name))
+      return_code <- addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
+      if (return_code == -1) {
+        output$uploadError <- renderText(sprintf("Error uploading %s", study_name))
+        break
+      }
+    }
     unlink("TEMPDIR", recursive=TRUE)
     updateProjects()
     updateStudies(input$projectChoice)
@@ -81,7 +93,7 @@ shinyServer(function(input, output, session) {
   
   unloadData <- observeEvent(input$studyChoices, {
     output$loadSuccess <- renderText("")
-    files <- NULL
+    values$data <- NULL
   })
   
  
@@ -112,10 +124,10 @@ shinyServer(function(input, output, session) {
       }
       frame <- getStudyDataFrame(values$con, pk_list)
       wide_format <- spread(frame, "new_name", "value")
-      files <<- wide_format
-      for (i in 1:length(colnames(files))){
-        incProgress(1/length(colnames(files)))
-        files[,i] <<- as.numeric(as.character(files[,i]))
+      values$data <<- wide_format
+      for (i in 1:length(colnames( values$data ))){
+        incProgress(1/length(colnames( values$data )))
+        values$data [,i] <<- as.numeric(as.character( values$data [,i]))
       }
       output$loadSuccess <- renderText("Data loaded.")
       output$currentProject <- renderText(paste("Project: ", input$projectChoice))
@@ -123,10 +135,10 @@ shinyServer(function(input, output, session) {
   })
   
   
-  process_files <- eventReactive(input$preProcess, {
+  process_data  <- eventReactive(input$preProcess, {
     withProgress(message="Processing data", {
       
-      Dataset <- files
+      Dataset <-  values$data 
       
       if("Remarks" %in% substr(names(Dataset),1,7)){
         Dataset <- Dataset[,-which( substr(names(Dataset),1,7) == "Remarks")]
@@ -154,31 +166,31 @@ shinyServer(function(input, output, session) {
         }
       }
       
-      files <<- Dataset
-      for (i in 1:length(colnames(files))){
-        files[,i] <<- as.numeric(as.character(files[,i]))
+      values$data <<- Dataset
+      for (i in 1:length(colnames( values$data ))){
+         values$data [,i] <<- as.numeric(as.character( values$data [,i]))
       }
       incProgress(0.25)
       
-      for (j in 1:length(colnames(files))){
-        n <- length(strsplit(colnames(files)[j], " ")[[1]])
-        list_of_string <- strsplit(colnames(files)[j], " ")[[1]]
+      for (j in 1:length(colnames( values$data ))){
+        n <- length(strsplit(colnames( values$data )[j], " ")[[1]])
+        list_of_string <- strsplit(colnames( values$data )[j], " ")[[1]]
         m <- list_of_string[1]
         if(n > 1){
           for (k in list_of_string[-1]){
             m <- paste(m,k,sep=".")
           }
         }
-        colnames(files)[j] <<- m
+        colnames( values$data )[j] <<- m
       }
       incProgress(0.25)
       
     })
-    files
+     values$data 
   })
   
   output$downloadB <- renderUI({
-    process_files()
+    process_data ()
     downloadButton("download_process", "Download merged file")
   })
   
@@ -187,12 +199,12 @@ shinyServer(function(input, output, session) {
       paste("merged_file","csv",sep=".")
     },
     content <- function(file) {
-      write.csv(files, file, row.names = F)
+      write.csv( values$data , file, row.names = F)
     }
   )
   
   output$viewB <- renderUI({
-    process_files()
+    process_data ()
     actionButton('view', 'Click to view merged file')
   })
   
@@ -201,7 +213,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$merged <- renderTable({
-    files
+     values$data 
   })
   
   acrossVariableTable <- observeEvent(input$across, {
@@ -237,33 +249,33 @@ shinyServer(function(input, output, session) {
 ################################################################################################ 
   
   processButton <- eventReactive(input$begin,{
-    files
+     values$data 
   })
   
   output$choose_var <- renderUI({
     processButton()
     if(length(input$Select_all) > 0){
       if(input$Select_all == 2){
-        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames(files), 
+        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames( values$data ), 
                        multiple = T)
       }
       else if(input$Select_all == 1){
-        selectInput("choose_variable", "Select explanatory variables", choices = colnames(files[-c(1:2)]), 
-                    multiple = T, selectize = F, selected = colnames(files[-c(1:2)]), size = 10)
+        selectInput("choose_variable", "Select explanatory variables", choices = colnames( values$data [-c(1:2)]), 
+                    multiple = T, selectize = F, selected = colnames( values$data [-c(1:2)]), size = 10)
       }
     }
   })
   
   output$select_group_var <- renderUI({
     processButton()
-    if(length(files) > 0){
-      selectizeInput("group_variable", "Select group variable", choices = colnames(files),selected = colnames(files)[2])
+    if(length( values$data ) > 0){
+      selectizeInput("group_variable", "Select group variable", choices = colnames( values$data ),selected = colnames( values$data )[2])
     }
   })
   
   output$select_func <- renderUI({
     processButton()
-    if(length(files) > 0){
+    if(length( values$data ) > 0){
       selectInput("main_function",
                   "Select main function", 
                   choices = c("Basic Statistics" = 1,
@@ -276,7 +288,7 @@ shinyServer(function(input, output, session) {
   
   output$help1 <- renderUI({
     processButton()
-    if(length(files) > 0){
+    if(length( values$data ) > 0){
       helpText("Click the Select button after you have finished selecting the explanatory variables, 
                the group variable and the main function.")
     }
@@ -310,7 +322,7 @@ shinyServer(function(input, output, session) {
   #Basic Statistics Table
   makeText1.1 <- reactive({
     options(digits = 3)
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
     info <- describe(variable)
     
     if (length(variable) > 1){
@@ -330,9 +342,9 @@ shinyServer(function(input, output, session) {
   #Boxplot 
   makePlot1.2 <- function(text_size){
     if(length(input$choose_variable1.2) > 0){
-      variable <- files[,colnames(files) %in% input$choose_variable1.2,drop = FALSE]
+      variable <-  values$data [,colnames( values$data ) %in% input$choose_variable1.2,drop = FALSE]
       
-      group_var <- files[,colnames(files) %in% selec_var()[[2]],drop = FALSE]
+      group_var <-  values$data [,colnames( values$data ) %in% selec_var()[[2]],drop = FALSE]
       variable$Group <- as.factor(group_var[,1])
       df <- melt(variable, id.vars = "Group")
       
@@ -354,9 +366,9 @@ shinyServer(function(input, output, session) {
   #Boxplot by group
   makePlot1.3 <- function(text_size){
     if(length(input$choose_variable1.3) > 0){
-      variable <- files[,colnames(files) %in% input$choose_variable1.3,drop = FALSE]
+      variable <-  values$data [,colnames( values$data ) %in% input$choose_variable1.3,drop = FALSE]
       
-      group_var <- files[,colnames(files) %in% selec_var()[[2]],drop = FALSE]
+      group_var <-  values$data [,colnames( values$data ) %in% selec_var()[[2]],drop = FALSE]
       variable$Group <- as.factor(group_var[,1])
       df <- melt(variable, id.vars = "Group")
       
@@ -376,14 +388,14 @@ shinyServer(function(input, output, session) {
   
   #Correlation Table
   makeText2.1.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
     info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
     info
   }
   
   #P Value Table
   makeText2.1.2 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
     p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
     p.mat
   }
@@ -399,7 +411,7 @@ shinyServer(function(input, output, session) {
         r <- "rho"
       }
       
-      variable <- files[,colnames(files) %in% input$choose_variable2.2,drop = FALSE]
+      variable <-  values$data [,colnames( values$data ) %in% input$choose_variable2.2,drop = FALSE]
       
       info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
       p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
@@ -508,7 +520,7 @@ shinyServer(function(input, output, session) {
     
     n <- NULL
     for(i in rownames(makeText2.1.2())){
-      df <- files[,colnames(files) %in% c(input$choose_variable_2.3.1,i)]
+      df <-  values$data [,colnames( values$data ) %in% c(input$choose_variable_2.3.1,i)]
       df <- na.omit(df)
       n <- c(n,length(rownames(df)))
     }
@@ -542,9 +554,9 @@ shinyServer(function(input, output, session) {
   
   #Scatterplot
   makePlot2.3 <- function(text_size){
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <-  values$data [,colnames( values$data ) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -595,8 +607,8 @@ shinyServer(function(input, output, session) {
   
   #PCA Results
   makeText3.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
     
     variable_1 <- na.omit(variable)
     group_1 <<- factor(group[as.numeric(rownames(variable_1)),])
@@ -617,9 +629,9 @@ shinyServer(function(input, output, session) {
   
   #PCA Biplot
   makePlot3 <- function(text_size){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop=F]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1,drop=F]
     
     variable_1 <- na.omit(variable)
     group_1 <- factor(group[as.numeric(rownames(variable_1)),])
@@ -665,8 +677,8 @@ shinyServer(function(input, output, session) {
     info1 <- paste("The principal component on the x axis explains", paste(x,"%", sep = ""), "of the total variation of the variables.")
     info2 <- paste("The principal component on the y axis explains", paste(y,"%", sep = ""),  "of the total variation of the variables.")
     
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
     variable_1 <- na.omit(variable)
     group_1 <<- factor(group[as.numeric(rownames(variable_1)),])
     df <- cbind(group_1,variable_1)
@@ -686,11 +698,11 @@ shinyServer(function(input, output, session) {
   
   #Interactive heatmap
   makePlot4.1 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
     
-    nam <- files[,colnames(files) %in% colnames(files)[1], drop = FALSE]
+    nam <-  values$data [,colnames( values$data ) %in% colnames( values$data )[1], drop = FALSE]
     
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
     group[,1] <- as.factor(group[,1])
     
     group$nam <- nam[,1]
@@ -719,11 +731,11 @@ shinyServer(function(input, output, session) {
   
   #Non-interactive heatmap
   makePlot4.2 <- function(){
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
     
-    nam <- files[,colnames(files) %in% colnames(files)[1], drop = FALSE]
+    nam <-  values$data [,colnames( values$data ) %in% colnames( values$data )[1], drop = FALSE]
     
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
     group[,1] <- as.factor(group[,1])
     
     rownames(variable) <- nam[,1]
@@ -1194,9 +1206,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$hover_info2.3<- renderPrint({
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <-  values$data [,colnames( values$data ) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1211,9 +1223,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$brush_info2.3 <- renderPrint({
-    variable <- files[,colnames(files) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1, drop = F]
+    variable <-  values$data [,colnames( values$data ) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1310,9 +1322,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$hover_info3 <- renderPrint({
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1,drop = FALSE]
     
     variable_1 <- na.omit(variable)
     group_1 <- factor(group[as.numeric(rownames(variable_1)),])
@@ -1334,9 +1346,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$brush_info3 <- renderPrint({
-    variable <- files[,colnames(files) %in% selec_var()[[1]],drop = FALSE]
-    group <- files[,colnames(files) %in% selec_var()[[2]], drop = FALSE]
-    ID <- files[,1,drop = FALSE]
+    variable <-  values$data [,colnames( values$data ) %in% selec_var()[[1]],drop = FALSE]
+    group <-  values$data [,colnames( values$data ) %in% selec_var()[[2]], drop = FALSE]
+    ID <-  values$data [,1,drop = FALSE]
     
     variable_1 <- na.omit(variable)
     group_1 <- factor(group[as.numeric(rownames(variable_1)),])

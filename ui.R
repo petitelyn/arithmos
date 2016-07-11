@@ -18,6 +18,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
       sidebarPanel(
           conditionalPanel(condition = "input.begin == false || input.back == true",
                            fileInput('file', 'Upload', multiple = T),
+                           textOutput('uploadError'),
                            selectInput("projectChoice", "Choose a project", project_list, multiple=F, selectize=F),
                            selectInput("studyChoices", "Select studies", NULL, selected=NULL, multiple=T, selectize=F, size=6),
                            actionButton('load', 'Load'),
