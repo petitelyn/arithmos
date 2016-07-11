@@ -1,7 +1,6 @@
+options(java.parameters = "-Xmx4g") 
 library(XLConnectJars)
 library(XLConnect)
-library(xlsx)
-library(readxl)
 library(psych)
 library(ggplot2)
 library(RColorBrewer)
@@ -271,3 +270,4 @@ ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
   }
   return(g)
 }
+

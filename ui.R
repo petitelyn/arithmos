@@ -31,8 +31,10 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            numericInput("row_cutoff", label = "Remove rows that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
                            
                            actionButton('preProcess', 'Process'),
-                           fluidRow(column(6,uiOutput("downloadB")),
-                                    column(3,uiOutput("viewB"))),
+                           uiOutput("downloadB"),
+                           uiOutput("viewB"),
+                           # fluidRow(column(6,uiOutput("downloadB")),
+                           #          column(3,uiOutput("viewB"))),
                            uiOutput("proceed_text"),
                            
                            checkboxInput('begin', "Begin Analysis",value=F),
@@ -41,9 +43,10 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
           
           conditionalPanel(condition = "input.begin == true",
                            checkboxInput('back', "Go Back",value=F),
-                           
+
                            h3(textOutput("currentProject")),
                            radioButtons("Select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T),
+
                            uiOutput("choose_var"),
                            uiOutput("help"),
                            uiOutput('select_group_var'),
