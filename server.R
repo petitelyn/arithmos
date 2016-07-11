@@ -32,19 +32,21 @@ shinyServer(function(input, output, session) {
     updateSelectInput(session, "projectChoice", choices=project_list, select=input$projectChoice)
   }
   
-  upload_data <- observeEvent(input$file,{
+  upload_data  <- observeEvent(input$file,{
+    output$uploadError <- renderText("")
     full_name_list <- input$file$name
     datapath_list <- input$file$datapath
     file_name_list <- list(100)
     for (j in 1:length(full_name_list)){
       file_split <- strsplit(full_name_list[[j]], "\\.")[[1]]
       file_type <- file_split[[2]]
-      if (!(strcmp(file_type, "xlsm") == TRUE)) {
-        print("Incorrect file type: Need two sheets, first with general info second with the data")
+      if (!(strcmp(file_type, "xlsm"))) {
+        output$uploadError <- renderText("Can only upload .xlsm")
         return()
       }
       file_name_list[[j]] <- file_split[[1]]
     }
+    
     count <- 1
     #hardcoded value
     csv_list <- list(100)
@@ -59,15 +61,26 @@ shinyServer(function(input, output, session) {
         count <- count + 1
       }
     }
+    
+    if (length(csv_list) != 2*length(file_name_list)) {
+      output$uploadError("Every .xlsm must be two sheets, with study info first and data second")
+      unlink("TEMPDIR", recursive=TRUE)
+      return()
+    }
+    
+    
     progress <- shiny::Progress$new()
     progress$set(value=0)
     total_studies <- length(csv_list) / 2
     for (i in seq(1, length(csv_list), 2)) {
-          study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
-          progress$inc(0, message = paste("Uploading", study_name))
-          addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
-          
-        }
+      study_name <- strsplit(file_name_list[[ceiling(i/2)]], "\\.")[[1]][[1]]
+      progress$inc(0, message = paste("Uploading", study_name))
+      return_code <- addStudy(values$con, csv_list[[i]], csv_list[[i+1]], study_name, total_studies, progress)
+      if (return_code == -1) {
+        output$uploadError <- renderText(sprintf("Error uploading %s", study_name))
+        break
+      }
+    }
     unlink("TEMPDIR", recursive=TRUE)
     updateProjects()
     updateStudies(input$projectChoice)

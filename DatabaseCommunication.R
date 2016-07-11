@@ -189,7 +189,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       } else if (strcmp(time_unit, "weeks")) {
         visit_to_days[[name]] <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]])) * 7
       } else {
-        next
+        visit_to_days[[name]] <- 0
       }
     }
     close(general_info_file)
@@ -397,7 +397,7 @@ getVariableAcross <- function(con, search_category, search_query) {
   if (strcmp(search_category, "Group")) {
     get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" FROM project JOIN study ON study.project_pk = project.pk JOIN
                         measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN
-                        igroup ON igroup.pk = subject.igroup_pk WHERE igroup LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code", search_query)
+                        igroup ON igroup.pk = subject.igroup_pk WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code", search_query)
   } else {
     get_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
                                 lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
@@ -413,6 +413,7 @@ getVariableAcross <- function(con, search_category, search_query) {
                                 JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, days ORDER BY days) t
                                GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", search_query)
   }
+  
   info_table <- dbGetQuery(con, get_info)
   return(info_table)
 }
