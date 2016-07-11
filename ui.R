@@ -14,7 +14,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(
     tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
     tags$script(src="relative_x_scrolling.js"),
-    h2(textOutput("currentProject")),
+    h5(textOutput("currentProject")),
     sidebarLayout(
       sidebarPanel(
           conditionalPanel(condition = "input.begin == false || input.back == true",
