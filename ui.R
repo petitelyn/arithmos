@@ -32,6 +32,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                            numericInput("row_cutoff", label = "Remove rows that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
                            
                            actionButton('preProcess', 'Process'),
+                           uiOutput('helptext'),
                            uiOutput("downloadB"),
                            uiOutput("viewB"),
                            # fluidRow(column(6,uiOutput("downloadB")),

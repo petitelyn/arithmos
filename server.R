@@ -8,6 +8,7 @@ shinyServer(function(input, output, session) {
   values <- reactiveValues(sessionId = NULL)
   values$con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
   values$data <- NULL
+  values$name <- NULL
   
   session$onSessionEnded(function() {
     
@@ -92,13 +93,9 @@ shinyServer(function(input, output, session) {
     values$data <- NULL
   })
   
- 
-  
-  
   loadStudies <- observeEvent(input$projectChoice, {
     updateStudies(input$projectChoice)
   })
-  
   
   databaseSearch <- observeEvent(input$search,{
     
@@ -157,16 +154,48 @@ shinyServer(function(input, output, session) {
           dataset <- dataset[-R,]
         }
       }
-    
+      
       incProgress(0.25)
+      num <- NULL
       for (i in 1:length(colnames(dataset))){
+        dataset[,i][dataset[,i] == "NA"] <- NA
+        
         if(gsub("^.*?_","",colnames(dataset)[i]) == -1){
           colnames(dataset)[i] <- gsub("_.*","",colnames(dataset)[i])
         }
+        
+        if(length(unique(na.omit(dataset[,i]))) == 1){
+          values$name <- c(values$name,colnames(dataset[i]))
+          num <- c(num,i)
+        }
       }
-      
+      if(length(num > 0)){
+        num <- -num
+        dataset <- dataset[num]
+      }
     })
     dataset
+  })
+  
+  output$helptext <- renderUI({
+    if(length(values$name) == 1){
+      helpText(paste(values$name," has been removed from the dataset since it is a constant variable."))
+    }
+    else if(length(values$name) > 1){
+      help_text <- values$name[1]
+      for (i in 2:length(values$name)){
+        if(i != length(values$name)){
+          help_text <- paste(help_text,values$name[i],sep=", ")
+        }
+        else{
+          help_text <- paste(help_text,values$name[i],sep=" & ")
+        }
+      }
+      helpText(paste(help_text," have been removed from the dataset since they are constant variables."))
+    }
+    else{
+      return()
+    }
   })
   
   output$downloadB <- renderUI({
@@ -359,7 +388,7 @@ shinyServer(function(input, output, session) {
                 "Select main function",
                 choices = c("Statistics" = 1,
                             "Correlation" = 2,
-                            "Principal Compoment Analysis" = 3,
+                            "Principal Component Analysis" = 3,
                             "Hierarchical Clustering & Heatmaps" = 4)
                 )
   })
@@ -387,6 +416,7 @@ shinyServer(function(input, output, session) {
     
     if(length(colnames(cat_var)) > 0){
       for(i in 1:length(colnames(cat_var))){
+        cat_var[,i][is.na(cat_var[,i])] <- "NA"
         cat_var[,i] <- as.factor(as.character(cat_var[,i]))
       }
     }
@@ -397,7 +427,7 @@ shinyServer(function(input, output, session) {
   lst <- list()
   lst[[1]] <- "Statistics"
   lst[[2]] <- "Correlation"
-  lst[[3]] <- "Principal Component Analysis"
+  lst[[3]] <- "Principal Component Analysis (PCA)"
   lst[[4]] <- "Hierarchical Clustering & Heatmaps"
 
   output$help2 <- renderUI({
@@ -449,6 +479,103 @@ shinyServer(function(input, output, session) {
 ######################################################################################  
 # List of makeText and makePlot functions
 ######################################################################################  
+  makeText1.1 <- reactive({
+    options(digits = 3)
+    if(input$select1.1 == 1){
+      variable <- selec_var()[[1]]
+      info <- describe(variable)
+      
+      if (length(variable) > 1){
+        Missing <- NULL
+        for (j in 1:length(variable)){
+          Missing <- c(Missing, count_missing(variable[,j]))
+        }
+      }
+      else{
+        Missing <- count_missing(variable[,1])
+      }
+      
+      info <- cbind(info[2],Missing,info[c(3:5,8,9,10)])
+      info
+    }
+    else if(input$select1.1 == 2){
+      cat_var <- selec_var()[[2]]
+      row_names <- NULL
+      n <- NULL
+      for (i in 1:length(colnames(cat_var))){
+        a <- table(cat_var[,i])
+        row_nam <- unique(cat_var[,i])[1]
+        n_nam <- a[names(a)==unique(cat_var[,i])[1]]
+        
+        if(length(unique(cat_var[,i])) > 1){
+          for(j in unique(cat_var[,i])[-1]){
+            row_nam <- paste(row_nam,j,sep=",")
+            n_nam <- paste(n_nam,a[names(a)==j],sep=",")
+          }
+        }
+        row_nam <- paste(colnames(cat_var)[i], " (", row_nam, ") ", sep="")
+        n_nam <- paste("(",n_nam,")",sep="")
+        row_names <- c(row_names,row_nam)
+        n <- c(n,n_nam)
+      }
+      df <- data.frame(n = n)
+      rownames(df) <- row_names
+      df <- format(df, justify = "left")
+      print(df,right=F)
+    }
+  })
+  
+  helpText1.1 <- reactive({
+    if(input$select1.1 == 1){
+      info1 <- paste("The headers in the table below represents")
+      info2 <- paste("")
+      info3 <- paste("n: number of present samples")
+      info4 <- paste("missing: numer of missing samples")
+      info5 <- paste("mean: average")
+      info6 <- paste("sd: standard deviation")
+      info7 <- paste("median: 50 percentile value")
+      info8 <- paste("min: minimum value")
+      info9 <- paste("max: maximum value")   
+      info10 <- paste("range: max - min")
+      
+      cat(sprintf(info1), "\n")
+      cat(sprintf(info2), "\n")
+      cat(sprintf(info3), "\n")
+      cat(sprintf(info4), "\n")
+      cat(sprintf(info5), "\n")
+      cat(sprintf(info6), "\n")
+      cat(sprintf(info7), "\n")
+      cat(sprintf(info8), "\n")
+      cat(sprintf(info9), "\n")
+      cat(sprintf(info10), "\n")
+    }
+    else if(input$select1.1 == 2){
+      cat_var <- selec_var()[[2]]
+      a <- table(cat_var[,1])
+      text_num <- a[names(a)==unique(cat_var[,1])[1]]
+      text_group <- unique(cat_var[,1])[1]
+      if(length(unique(cat_var[,1])) > 1){
+        for(i in 2:length(unique(cat_var[,1]))){
+          if(i != length(unique(cat_var[,1]))){
+            text_num <- paste(text_num,a[names(a)==unique(cat_var[,1])[i]],sep=", ")
+            text_group <- paste(text_group,unique(cat_var[,1])[i],sep=", ")
+          }
+          else{
+            text_num <- paste(text_num,a[names(a)==unique(cat_var[,1])[i]],sep=" & ")
+            text_group <- paste(text_group,unique(cat_var[,1])[i],sep=" & ")
+          }
+        }
+      }
+      info1 <- paste("The table below displays the sample size of each group for each categorical variable.")
+      info2 <- paste("")
+      info3 <- paste("i.e.",colnames(cat_var)[1], " has ",
+                     text_num, " samples for group ",text_group," respectively.",sep="")
+      cat(sprintf(info1), "\n")
+      cat(sprintf(info2), "\n")
+      cat(sprintf(info3), "\n")
+    }
+  })
+  
   #Basic Statistics Table for explanatory variables
   makeText1.1.1 <- reactive({
     options(digits = 3)
@@ -470,9 +597,27 @@ shinyServer(function(input, output, session) {
   })
   
   helpText1.1.1 <- function(){
-    info1 <- paste("The table below displays basic statistical information such as sample size, number of missing samples and average value.")
+    info1 <- paste("The table below displays")
+    info2 <- paste("")
+    info3 <- paste("n: number of present samples")
+    info4 <- paste("missing: numer of missing samples")
+    info5 <- paste("mean: average")
+    info6 <- paste("sd: standard deviation")
+    info7 <- paste("median: 50 percentile value")
+    info8 <- paste("min: minimum value")
+    info9 <- paste("max: maximum value")   
+    info10 <- paste("range: max - min")
     
     cat(sprintf(info1), "\n")
+    cat(sprintf(info2), "\n")
+    cat(sprintf(info3), "\n")
+    cat(sprintf(info4), "\n")
+    cat(sprintf(info5), "\n")
+    cat(sprintf(info6), "\n")
+    cat(sprintf(info7), "\n")
+    cat(sprintf(info8), "\n")
+    cat(sprintf(info9), "\n")
+    cat(sprintf(info10), "\n")
   }
   
   makeText1.1.2 <- reactive({
@@ -484,7 +629,7 @@ shinyServer(function(input, output, session) {
       row_nam <- unique(cat_var[,i])[1]
       n_nam <- a[names(a)==unique(cat_var[,i])[1]]
       
-      if(length(unique(cat_var[,1])) > 1){
+      if(length(unique(cat_var[,i])) > 1){
         for(j in unique(cat_var[,i])[-1]){
           row_nam <- paste(row_nam,j,sep=",")
           n_nam <- paste(n_nam,a[names(a)==j],sep=",")
@@ -504,22 +649,24 @@ shinyServer(function(input, output, session) {
   helpText1.1.2 <- reactive({
     cat_var <- selec_var()[[2]]
     a <- table(cat_var[,1])
-    text <- paste(a[names(a)==unique(cat_var[,1])[1]],"samples for group",unique(cat_var[,1])[1])
+    text_num <- a[names(a)==unique(cat_var[,1])[1]]
+    text_group <- unique(cat_var[,1])[1]
     if(length(unique(cat_var[,1])) > 1){
       for(i in 2:length(unique(cat_var[,1]))){
         if(i != length(unique(cat_var[,1]))){
-          text1 <- paste(a[names(a)==unique(cat_var[,1])[i]],"samples for group",unique(cat_var[,1])[i])
-          text <- paste(text,text1,sep=", ")
+          text_num <- paste(text_num,a[names(a)==unique(cat_var[,1])[i]],sep=", ")
+          text_group <- paste(text,text1,sep=", ")
         }
         else{
-          text1 <- paste(a[names(a)==unique(cat_var[,1])[i]],"samples for group",unique(cat_var[,1])[i])
-          text <- paste(text," & ", text1,".",sep="")
+          text_num <- paste(text_num,a[names(a)==unique(cat_var[,1])[i]],sep=" & ")
+          text_group <- paste(text,text1,sep=" & ")
         }
       }
     }
     info1 <- paste("The table below displays the sample size of each group for each categorical variable.")
     info2 <- paste("")
-    info3 <- paste("For example: The variable ",colnames(cat_var)[1], " has ",text,sep="")
+    info3 <- paste("For example: The variable ",colnames(cat_var)[1], " has ",
+                   text_num, " samples for group ",text_group," respectively.",sep="")
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
     cat(sprintf(info3), "\n")
@@ -552,9 +699,9 @@ shinyServer(function(input, output, session) {
   }
   
   helpText1.2 <- function(){
-    info1 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of non-categorical variables.")
+    info1 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of continuous variables.")
     info2 <- paste("")
-    info3 <- paste("For vizualization, recommended number of variables selected should not exceed 20.")
+    info3 <- paste("Recommended number of variables selected: <= 20.")
     info4 <- paste("If more than 20 variables are selected, only the first 20 will be plotted.")
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
@@ -855,7 +1002,7 @@ shinyServer(function(input, output, session) {
     for (i in unique(group[,1])){
       count <- count + 1
       n <- length(which(group[,1] == i))
-      text <- paste("Number of samples remaining in group",i,":",n)
+      text <- paste("Number of samples in group",i,":",n)
       info <- cbind(info,text)
     }
     
@@ -865,23 +1012,17 @@ shinyServer(function(input, output, session) {
   
   #PCA Results
   makeText3.1 <- function(){
-    variable <- selec_var()[[1]][-194]
+    variable <- selec_var()[[1]]
     
     rownames(variable) <- process_data()[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
-    if(input$type3.1 == 1){
-      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
-    }
-    
-    if(input$type3.1 == 2){
-      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
-    }
+    var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     
     info <- summary(var.pca)
     eigen <- info[[1]]^2
     newinfo <- rbind("Eigenvalues" = eigen, info$importance)
-    newinfo
+    newinfo[3:4,]
   }
   
   helpText3 <- function(){
@@ -889,18 +1030,10 @@ shinyServer(function(input, output, session) {
     info2 <- paste("")
     info3 <- paste("If there are more than 10 principal componetns, only the first 10 will be shown in the table.")
     info4 <- paste("Download the table to view all of them.")
-    info5 <- paste("")
-    info6 <- paste("Standardization accounts for the different units and variation of the variables.")
-    info7 <- paste("")
-    info8 <- paste("Selection of group variables determines the colour of each sample in the biplot.")
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
     cat(sprintf(info3), "\n")
     cat(sprintf(info4), "\n")
-    cat(sprintf(info5), "\n")
-    cat(sprintf(info6), "\n")
-    cat(sprintf(info7), "\n")
-    cat(sprintf(info8), "\n")
   }
   
   #PCA Biplot
@@ -911,15 +1044,8 @@ shinyServer(function(input, output, session) {
     
     rownames(variable) <- process_data()[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
-
-    if(input$type3.1 == 1){
-      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
-    }
+    var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     
-    if(input$type3.1 == 2){
-      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
-    }
-   
     g <- ggbiplot(var.pca, varname.size = 4, obs.scale = 1, var.scale = 1,
                   choices = c(as.numeric(str_sub(input$type3.2,3)),
                               as.numeric(str_sub(input$type3.3,3))),
@@ -935,7 +1061,7 @@ shinyServer(function(input, output, session) {
             axis.text.y = element_text(margin=margin(0,10,0,0)),
             axis.title = element_text(margin=margin(0,0,20,0))) +
       
-      ggtitle(input$main3)
+      ggtitle(input$main3) + scale_colour_discrete(name = input$choose_group3)
     
     g
   }
@@ -1098,7 +1224,7 @@ shinyServer(function(input, output, session) {
            placement = "right")
   })
   
-  lista[[3]] <- tagList(actionButton('getPCA', 'Get results for PCA biplot'))
+  lista[[3]] <- NULL
   
   lista[[4]] <- tagList(actionButton('Get_results', 'Get results'))
   
@@ -1110,158 +1236,125 @@ shinyServer(function(input, output, session) {
   #*****************************************#
   
   listb <- list()
-  listb[["1-1"]] <- tagList(h3("Statistics Table for Explanatory Variables"),
-                            actionButton("help1.1.1","Help",icon=icon("question-circle")),
-                            
-                            br(),
-                            
-                            hidden(verbatimTextOutput("helptext1.1.1")),
-                            
-                            br(),
-                            
-                            downloadButton('downloadData1.1.1', 'Download data'),
-                            verbatimTextOutput('text1.1.1'),
-                            
-                            br(),
-                            
-                            h3("Statistics Table for Categorical Variables"),
-                            actionButton("help1.1.2","Help",icon=icon("question-circle")),
-                            
-                            br(),
-                            
-                            hidden(verbatimTextOutput("helptext1.1.2")),
-                            
-                            br(),
-                            
-                            downloadButton('downloadData1.1.2', 'Download data'),
-                            verbatimTextOutput('text1.1.2'))
+  listb[["1-1"]] <- tagList(radioButtons("select1.1", paste("Select which statistics table to view"), 
+                                         choices = c("Explanatory variable" = 1, "Categorical variable" = 2), inline = T),
+                            downloadButton('downloadData1.1', 'Download data'),
+                            actionButton("help1.1","Help",icon=icon("question-circle")),
+                            hidden(verbatimTextOutput("helptext1.1")),
+                            verbatimTextOutput('text1.1'))
   
-  observeEvent(input$help1.1.1, {
-    toggle("helptext1.1.1")
+  observeEvent(input$help1.1, {
+    toggle("helptext1.1")
   })
   
-  output$helptext1.1.1 <- renderPrint({
-    helpText1.1.1()
+  output$helptext1.1 <- renderPrint({
+    helpText1.1()
   })
   
-  output$downloadData1.1.1 <- downloadHandler(
+  output$downloadData1.1 <- downloadHandler(
     filename = function() {
       paste('exp_stats','.csv', sep='')},
     content = function(file) {
-      df <- makeText1.1.1()
-      df <- cbind(rownames(df),df)
-      df[1,1] <- NA
-      d <- data.frame()
-      size <- dim(df)
-      d[1:(size[1]+5),] <-NA
-      d[,1:(size[2])] <- NA
-      d[1,1] <- "Name of Project:"
-      d[1,2] <- input$projectChoice
-      d[2,1] <- "Date & Time:"
-      d[2,2] <- as.character(Sys.time())
-      d[3,1] <- "Timezone:"
-      d[3,2] <- as.character(Sys.timezone())
-      d[4,1] <- "The data is based on the following process_data() and variables :"
-      
-      nam <- "List of values$data:"
-      for (i in input$studyChoices){
-        nam <- paste(nam,"\n",i,sep = "")
+      df <- makeText1.1()
+      if(input$select1.1 == 1){
+        df <- cbind(rownames(df),df)
+        df[1,1] <- NA
+        d <- data.frame()
+        size <- dim(df)
+        d[1:(size[1]+5),] <-NA
+        d[,1:(size[2])] <- NA
+        d[1,1] <- "Name of Project:"
+        d[1,2] <- input$projectChoice
+        d[2,1] <- "Date & Time:"
+        d[2,2] <- as.character(Sys.time())
+        d[3,1] <- "Timezone:"
+        d[3,2] <- as.character(Sys.timezone())
+        d[4,1] <- "The data is based on the following process_data() and variables :"
+        
+        nam <- "List of values$data:"
+        for (i in input$studyChoices){
+          nam <- paste(nam,"\n",i,sep = "")
+        }
+        d[4,2] <- nam
+        
+        nam1 <- "List of variables:"
+        for (i in input$choose_variable){
+          nam1 <- paste(nam1,"\n",i,sep = "")
+        }
+        d[4,3] <- nam1
+        
+        d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                        input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                        input$col_cutoff, "% missing values.", sep = "")
+        
+        d[8,1] <- paste("Title: Statistics Table for Explanatory Variables")
+        
+        d[10,] <- colnames(df)
+        d[11:(size[1]+10),] <- df
+        d[11:(size[1]+10),1] <- rownames(df)
+        d[10,1] <- NA
+        
+        colnames(d) <- rep("", length(colnames(d)))
+        write.csv(d, file,na="",row.names=F)
       }
-      d[4,2] <- nam
       
-      nam1 <- "List of variables:"
-      for (i in input$choose_variable){
-        nam1 <- paste(nam1,"\n",i,sep = "")
+      else if(input$select1.1 == 2){
+        df <- makeText1.1.2()
+        d <- data.frame()
+        size <- dim(df)
+        d[1:(size[1]+5),] <-NA
+        d[,1:(size[2])] <- NA
+        d[1,1] <- "Name of Project:"
+        d[1,2] <- input$projectChoice
+        d[2,1] <- "Date & Time:"
+        d[2,2] <- as.character(Sys.time())
+        d[3,1] <- "Timezone:"
+        d[3,2] <- as.character(Sys.timezone())
+        d[4,1] <- "The data is based on the following process_data() and variables :"
+        
+        nam <- "List of values$data:"
+        for (i in input$studyChoices){
+          nam <- paste(nam,"\n",i,sep = "")
+        }
+        d[4,2] <- nam
+        
+        nam1 <- "List of variables:"
+        for (i in input$choose_variable){
+          nam1 <- paste(nam1,"\n",i,sep = "")
+        }
+        d[4,3] <- nam1
+        
+        d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                        input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                        input$col_cutoff, "% missing values.", sep = "")
+        
+        d[8,1] <- paste("Title: Statistics Table for Categorical Variables")
+        
+        d[10,2] <- "n"
+        d[11:(size[1]+10),2] <- makeText1.1.2()
+        d[11:(size[1]+10),1] <- rownames(df)
+        d[10,1] <- NA
+        
+        colnames(d) <- rep("", length(colnames(d)))
+        write.csv(d, file,na="",row.names=F)
       }
-      d[4,3] <- nam1
-      
-      d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
-                      input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
-                      input$col_cutoff, "% missing values.", sep = "")
-      
-      d[8,1] <- paste("Title: Statistics Table for Explanatory Variables")
-      
-      d[10,] <- colnames(df)
-      d[11:(size[1]+10),] <- df
-      d[11:(size[1]+10),1] <- rownames(df)
-      d[10,1] <- NA
-      
-      colnames(d) <- rep("", length(colnames(d)))
-      write.csv(d, file,na="",row.names=F)
-      })
+    }
+  )
   
-  output$text1.1.1 <- renderPrint({
-    makeText1.1.1()
-  })
-  
-  observeEvent(input$help1.1.2, {
-    toggle("helptext1.1.2")
-  })
-  
-  output$helptext1.1.2 <- renderPrint({
-    helpText1.1.2()
-  })
-  
-  output$downloadData1.1.2 <- downloadHandler(
-    filename = function() {
-      paste('cat_stats','.csv', sep='')},
-    content = function(file) {
-      df <- makeText1.1.2()
-      d <- data.frame()
-      size <- dim(df)
-      d[1:(size[1]+5),] <-NA
-      d[,1:(size[2])] <- NA
-      d[1,1] <- "Name of Project:"
-      d[1,2] <- input$projectChoice
-      d[2,1] <- "Date & Time:"
-      d[2,2] <- as.character(Sys.time())
-      d[3,1] <- "Timezone:"
-      d[3,2] <- as.character(Sys.timezone())
-      d[4,1] <- "The data is based on the following process_data() and variables :"
-      
-      nam <- "List of values$data:"
-      for (i in input$studyChoices){
-        nam <- paste(nam,"\n",i,sep = "")
-      }
-      d[4,2] <- nam
-      
-      nam1 <- "List of variables:"
-      for (i in input$choose_variable){
-        nam1 <- paste(nam1,"\n",i,sep = "")
-      }
-      d[4,3] <- nam1
-      
-      d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
-                      input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
-                      input$col_cutoff, "% missing values.", sep = "")
-      
-      d[8,1] <- paste("Title: Statistics Table for Categorical Variables")
-      
-      d[10,2] <- "n"
-      d[11:(size[1]+10),2] <- makeText1.1.2()
-      d[11:(size[1]+10),1] <- rownames(df)
-      d[10,1] <- NA
-      
-      colnames(d) <- rep("", length(colnames(d)))
-      write.csv(d, file,na="",row.names=F)
-    })
-  
-  output$text1.1.2 <- renderPrint({
-    makeText1.1.2()
+  output$text1.1 <- renderPrint({
+    makeText1.1()
   })
   
   listb[["1-2"]] <- tagList(h3("Boxplot"),
+                            uiOutput("Select_all1.2"),
+                            uiOutput("Choice1.2"),
+                            downloadButton("downloadPlot1.2", "Download plot as PDF"),
                             actionButton("help1.2","Help",icon=icon("question-circle")),
-                            
-                            br(),
-                            
                             hidden(verbatimTextOutput("helptext1.2")),
                             
                             br(),
-                            uiOutput("Select_all1.2"),
-                            uiOutput("Choice1.2"),
+                            br(),
                             textInput("main1.2", "Key in the title of boxplot"),
-                            downloadButton("downloadPlot1.2", "Download plot as PDF"),
                             plotOutput("plot1.2", height = "1000px"))
   
   observeEvent(input$help1.2, {
@@ -1273,7 +1366,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$Select_all1.2 <- renderUI({
-    radioButtons("select_all1.2", paste("Select all", length(selec_var()[[1]]), "non-categorical variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
+    radioButtons("select_all1.2", paste("Select all", length(selec_var()[[1]]), "continuous variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
   })
   
   output$Choice1.2 <- renderUI({
@@ -1660,21 +1753,15 @@ shinyServer(function(input, output, session) {
     brushedPoints(df, input$plot1_brush2.3, xvar = input$choose_variable_2.3.2, yvar = input$choose_variable_2.3.3)
   })
   
-  listb[["3"]] <- tagList(hidden(verbatimTextOutput("text3.2")),
-                          h3('Result of principal component analysis'),
-                          actionButton("help3","Help",icon=icon("question-circle")),
-                          
-                          br(),
-                          
-                          hidden(verbatimTextOutput("helptext3")),
-                          
-                          br(),
-                          
-                          radioButtons("type3.1", "Standardize variables?",
-                                       choices = c("Yes" = 1,
-                                                   "No" = 2),
-                                       inline = T),
+  listb[["3"]] <- tagList(h3('Table of results explained by PC'),
                           downloadButton('downloadData3', 'Download data'),
+                          actionButton("help3","Help",icon=icon("question-circle")),
+                          actionButton('getPCA', 'Get results for PCA biplot'),
+                          br(),
+                          
+                          hidden(verbatimTextOutput("text3.2")),
+                          hidden(verbatimTextOutput("helptext3")),
+                          br(),
                           verbatimTextOutput('text3.1'),
                           
                           br(),
@@ -1739,12 +1826,12 @@ shinyServer(function(input, output, session) {
   )
   
   output$Choice3.1 <- renderUI({
-    selectizeInput("type3.2", "Select first principal component", 
+    selectizeInput("type3.2", "Select principal component on x axis", 
                 choices = colnames(makeText3.1()))
   })
   
   output$Choice3.2<- renderUI({
-    selectizeInput("type3.3", "Select second principal component", 
+    selectizeInput("type3.3", "Select principal component on y axis", 
                    choices = colnames(makeText3.1())[-which(colnames(makeText3.1()) == input$type3.2)])
   })
  
@@ -1766,15 +1853,7 @@ shinyServer(function(input, output, session) {
     rownames(variable) <- process_data()[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
-    if(input$type3.1 == 1){
-      var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
-    }
-    
-    if(input$type3.1 == 2){
-      var.pca <- prcomp(variable, center = FALSE, scale. = FALSE) 
-    }
-    
-    
+    var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
     df <- cbind(process_data()[,1],group,variable,var.pca$x)
     
     colnames(df)[1:2] <- c("Subject#", input$choose_group3)
