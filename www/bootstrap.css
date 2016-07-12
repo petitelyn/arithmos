@@ -12,6 +12,95 @@
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
  */
 /*! normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css */
+/*Custom CSS*/
+.initiallyHidden {
+  display: none; 
+}
+
+.well {
+  position: fixed;
+  min-height: 1px;
+  max-height: 80%;
+  padding-left: 15px;
+  padding-right: 15px;
+  z-index:10000;
+  width:32%;
+  overflow-y:auto;
+  padding-bottom:5%;
+}
+
+.no-top {
+  margin-top:0;
+}
+
+.no-margins {
+  margin-top:0;
+  margin-bottom:0;
+}
+
+#restart {
+  position:absolute;
+  top:0;
+  right:0;
+   color:#222222;
+  background-color: transparent;
+  border-color: #222222;
+}
+
+#preProcess {
+  width:100%;
+}
+
+#start {
+  width:100%;
+}
+#downloadMerged {
+  width:49%;
+ color:#222222;
+  background-color: transparent;
+  border-color: #222222;
+  
+}
+#viewMerged {
+  width:50%;
+  color:#222222;
+  background-color: transparent;
+  border-color: #222222;
+}
+#load {
+  width:100%;
+}
+#across {
+  width:39%;
+}
+#select_variable {
+  width:100%;
+}
+#back {
+  color:#222222;
+  background-color: transparent;
+  border-color: #222222;
+  width:1%;
+  height:1%;
+}
+#mainPanel {
+    min-height: 0;
+  padding: 19px;
+  display:table;
+  width:100%;
+  overflow:scroll;
+  margin-bottom: 20px;
+  background-color: #ffffff;
+  border: 1px solid #e3e3e3;
+  border-radius: 0;
+  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+#mainPanel:empty
+{
+    display:none;
+}
+/* End */
 html {
   font-family: sans-serif;
   -ms-text-size-adjust: 100%;
@@ -1617,23 +1706,11 @@ pre code {
   margin-left: -15px;
   margin-right: -15px;
 }
-.col-xs-1, .col-sm-1, .col-md-1, .col-lg-1, .col-xs-2, .col-sm-2, .col-md-2, .col-lg-2, .col-xs-3, .col-sm-3, .col-md-3, .col-lg-3, .col-sm-4, .col-xs-4, .col-md-4, .col-lg-4, .col-xs-5, .col-sm-5, .col-md-5, .col-lg-5, .col-xs-6, .col-sm-6, .col-md-6, .col-lg-6, .col-xs-7, .col-sm-7, .col-md-7, .col-lg-7, .col-xs-8, .col-sm-8, .col-md-8, .col-lg-8, .col-xs-9, .col-sm-9, .col-md-9, .col-lg-9, .col-xs-10, .col-sm-10, .col-md-10, .col-lg-10, .col-xs-11, .col-sm-11, .col-md-11, .col-lg-11, .col-xs-12, .col-sm-12, .col-md-12, .col-lg-12 {
+.col-xs-1, .col-sm-1, .col-md-1, .col-lg-1, .col-xs-2, .col-sm-2, .col-md-2, .col-lg-2, .col-xs-3, .col-sm-3, .col-md-3, .col-lg-3, .col-xs-4, .col-sm-4, .col-md-4, .col-lg-4, .col-xs-5, .col-sm-5, .col-md-5, .col-lg-5, .col-xs-6, .col-sm-6, .col-md-6, .col-lg-6, .col-xs-7, .col-sm-7, .col-md-7, .col-lg-7, .col-xs-8, .col-sm-8, .col-md-8, .col-lg-8, .col-xs-9, .col-sm-9, .col-md-9, .col-lg-9, .col-xs-10, .col-sm-10, .col-md-10, .col-lg-10, .col-xs-11, .col-sm-11, .col-md-11, .col-lg-11, .col-xs-12, .col-sm-12, .col-md-12, .col-lg-12 {
   position: relative;
   min-height: 1px;
   padding-left: 15px;
   padding-right: 15px;
-}
-
-.well {
-  position: fixed;
-  min-height: 1px;
-  padding-left: 15px;
-  padding-right: 15px;
-  z-index:1;
-  width:32%;
-  height:80%;
-  overflow-x:auto;
-  padding-bottom:5%;
 }
 .col-xs-1, .col-xs-2, .col-xs-3, .col-xs-4, .col-xs-5, .col-xs-6, .col-xs-7, .col-xs-8, .col-xs-9, .col-xs-10, .col-xs-11, .col-xs-12 {
   float: left;

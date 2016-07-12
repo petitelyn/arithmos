@@ -14,7 +14,11 @@ shinyServer(function(input, output, session) {
     observe(dbDisconnect(values$con))
   })
   
-################################################################################################ 
+  restartSession <- observeEvent(input$restart,{
+    values$data <- NULL
+    
+    session$sendCustomMessage (type="switch", "load")
+  })
   
   updateStudies <- function(current_project) {
     
@@ -23,11 +27,11 @@ shinyServer(function(input, output, session) {
     get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
     study_list <- dbGetQuery(values$con, get_studies)[["study_name"]]
     updateSelectInput(session, "studyChoices", choices=study_list, selected=study_list)
+    output$acrossInfo <- renderTable(NULL)
     
   }
   
   updateProjects <- function() {
-    
     project_list <- dbGetQuery(values$con, "SELECT project_code FROM project")[["project_code"]]
     updateSelectInput(session, "projectChoice", choices=project_list, select=input$projectChoice)
   }
@@ -123,11 +127,12 @@ shinyServer(function(input, output, session) {
       values$data <<- wide_format
       output$loadSuccess <- renderText("Data loaded.")
       output$currentProject <- renderText(paste("Project: ", input$projectChoice))
+      session$sendCustomMessage (type="switch", "process")
     })
   })
   
   
-  process_data <- eventReactive(input$preProcess, {
+  process_data <- observeEvent(input$preProcess, {
     withProgress(message="Processing data", {
       
       dataset <- values$data
@@ -166,21 +171,20 @@ shinyServer(function(input, output, session) {
       }
       
     })
-    dataset
+    session$sendCustomMessage (type="switch", "view")
+    output$mergedTable <- renderTable(NULL)
+    values$data <- dataset
   })
   
-  output$downloadB <- renderUI({
-    process_data()
-    downloadButton("download_process", "Download merged file")
-  })
   
-  output$download_process <- downloadHandler(
+  
+  output$downloadMerged <- downloadHandler(
     filename = function() {
       paste("merged_file","csv",sep=".")
     },
     content <- function(file) {
       d <- data.frame()
-      size <- dim(process_data())
+      size <- dim(values$data)
       d[1:(size[1]+5),] <- NA
       d[,1:size[2]] <- NA
       d[1,1] <- "Name of Project:"
@@ -190,7 +194,6 @@ shinyServer(function(input, output, session) {
       d[3,1] <- "Timezone:"
       d[3,2] <- as.character(Sys.timezone())
       d[4,1] <- "This dataset is formed by merging the following values$data:"
-      
       nam <- input$studyChoices[1]
       for (i in input$studyChoices[-1]){
         nam <- paste(nam,"\n",i,sep = "")
@@ -201,25 +204,16 @@ shinyServer(function(input, output, session) {
                       input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
                       input$col_cutoff, "% missing values.", sep = "")
       
-      d[8,] <- colnames(process_data())
-      d[9:(size[1]+8),] <- process_data()
+      d[8,] <- colnames(values$data)
+      d[9:(size[1]+8),] <- values$data
       
       colnames(d) <- rep("", length(colnames(d)))
       write.csv(d, file, row.names = F, na="")
     }
   )
   
-  output$viewB <- renderUI({
-    process_data()
-    actionButton('view', 'Click to view merged file')
-  })
-  
-  observeEvent(input$view, {
-    toggle("merged")
-  })
-  
-  output$merged <- renderTable({
-    process_data()
+  observeEvent(input$viewMerged, {
+    output$mergedTable <- renderTable(values$data)
   })
   
   acrossVariableTable <- observeEvent(input$across, {
@@ -239,23 +233,27 @@ shinyServer(function(input, output, session) {
     output$acrossInfo <- renderDataTable(info_table)
   })
   
-  observe({
-    if(input$back == T){
-      updateCheckboxInput(session,"begin",value=F)
-      current_proj <<- input$projectChoice
-    }
-  })
+  # observe({
+  #   if(input$back == T){
+  #     updateCheckboxInput(session,"begin",value=F)
+  #     current_proj <<- input$projectChoice
+  #   }
+  # })
+  # 
+  # observe({
+  #   if(input$begin == T){
+  #     updateCheckboxInput(session,"back",value=F)
+  #   }
+  # })
   
-  observe({
-    if(input$begin == T){
-      updateCheckboxInput(session,"back",value=F)
-    }
+  beginAnalysis <- observeEvent(input$start,{
+    session$sendCustomMessage (type="switch", "analysis")
   })
   
 ################################################################################################ 
   
   output$selectTime <- renderUI({
-    dataset <- process_data()
+    dataset <- values$data
     if(input$select_time == 1){
       d <- unique(as.numeric(gsub("^.*?_","",colnames(dataset))))
       d <- d[!is.na(d)]
@@ -263,9 +261,12 @@ shinyServer(function(input, output, session) {
                      multiple = T)
     }
   })
+  outputOptions(output, 'selectTime', suspendWhenHidden=FALSE)
+  
+  
   
   output$selectAll <- renderUI({
-    dataset <- process_data()
+    dataset <- values$data
     if(input$select_time == 1){
       radioButtons("select_all", "Select all variables within the timepoint?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
     }
@@ -273,9 +274,11 @@ shinyServer(function(input, output, session) {
       radioButtons("select_all", "Select all variables?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
     }
   })
+  outputOptions(output, 'selectAll', suspendWhenHidden=FALSE)
+  
   
   output$choose_var <- renderUI({
-    dataset <- process_data()[-1]
+    dataset <- values$data[-1]
     if(input$select_time == 1){
       
       c1 <- colnames(dataset[,which(gsub("^.*?_","",colnames(dataset)) == colnames(dataset))])
@@ -296,18 +299,20 @@ shinyServer(function(input, output, session) {
     
     else{
       if(input$select_all == 2){
-        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames(process_data())[-1], 
+        selectizeInput("choose_variable", "Select explanatory variables", choices = colnames(values$data)[-1], 
                        multiple = T)
       }
       else if(input$select_all == 1){
-        selectInput("choose_variable", "Select explanatory variables", choices = colnames(process_data())[-1], 
-                    multiple = T, selectize = F, selected = colnames(process_data())[-1], size = 10)
+        selectInput("choose_variable", "Select explanatory variables", choices = colnames(values$data)[-1], 
+                    multiple = T, selectize = F, selected = colnames(values$data)[-1], size = 10)
       }
     }
   })
+  outputOptions(output, 'choose_var', suspendWhenHidden=FALSE)
+  
   
   output$select_cat_var <- renderUI({
-    dataset <- process_data()[-1]
+    dataset <- values$data[-1]
     if(length(input$choose_variable) > 0){
       dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
       ave_uniq <- NULL
@@ -343,18 +348,21 @@ shinyServer(function(input, output, session) {
       helpText("No explanatory variables are selected.")
     }
   })
+  outputOptions(output, 'select_cat_var', suspendWhenHidden=FALSE)
+  
   
   output$help <- renderUI({
-    dataset <- process_data()
+    dataset <- values$data
     dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
     if(length(unique(gsub("_.*","",colnames(dataset)))) > 1){
       helpText("The variables in the list above are sorted by its likelihood to be a categorical variable. 
                Variables suspected to be categorical have been preselected.")
     }
-  })
+  })  
+  outputOptions(output, 'help', suspendWhenHidden=FALSE)
+
   
   output$select_func <- renderUI({
-    process_data()
     selectInput("main_function",
                 "Select main function",
                 choices = c("Statistics" = 1,
@@ -363,20 +371,26 @@ shinyServer(function(input, output, session) {
                             "Hierarchical Clustering & Heatmaps" = 4)
                 )
   })
+  outputOptions(output, 'select_func', suspendWhenHidden=FALSE)
+  
   
   output$help1 <- renderUI({
-    process_data()
+    values$data
     helpText("Click the Select button after you have finished selecting the explanatory variables, 
               the group variable and the main function.")
   })
+  outputOptions(output, 'help1', suspendWhenHidden=FALSE)
+  
   
   output$select_var <- renderUI({
-    process_data()
+    values$data
     actionButton('select_variable', "Select")
   })
+  outputOptions(output, 'select_var', suspendWhenHidden=FALSE)
+  
   
   selec_var <- eventReactive(input$select_variable,{
-    dataset <- process_data()[-1]
+    dataset <- values$data[-1]
     dataset <- dataset[,colnames(dataset) %in% input$choose_variable,drop = FALSE]
     exp_var <- dataset[,!gsub("_.*","",colnames(dataset)) %in% input$cat_variable,drop = FALSE]
     cat_var <- dataset[,gsub("_.*","",colnames(dataset)) %in% input$cat_variable,drop = FALSE]
@@ -406,6 +420,8 @@ shinyServer(function(input, output, session) {
              length(selec_var()[[2]]), " explanatory variables as categorical variables and ",lst[[as.numeric(selec_var()[[3]])]],
              " as the main function.")
   })
+  outputOptions(output, 'help2', suspendWhenHidden=FALSE)
+  
   
   output$warning1 <- renderUI({
     selec_var()
@@ -413,6 +429,8 @@ shinyServer(function(input, output, session) {
       helpText("Warning: No categorical variables are selected.")
     }
   })
+  outputOptions(output, 'warning1', suspendWhenHidden=FALSE)
+  
   
   output$warning2 <- renderUI({
     var_name <- NULL
@@ -595,9 +613,9 @@ shinyServer(function(input, output, session) {
   #Boxplot by group
   makePlot1.3 <- function(text_size){
     if(length(input$choose_variable1.3) > 0){
-      variable <- process_data()[,colnames(process_data()) %in% input$choose_variable1.3,drop = FALSE]
+      variable <- values$data[,colnames(values$data) %in% input$choose_variable1.3,drop = FALSE]
       
-      group_var <- process_data()[,colnames(process_data()) %in% selec_var()[[2]],drop = FALSE]
+      group_var <- values$data[,colnames(values$data) %in% selec_var()[[2]],drop = FALSE]
       variable$Group <- as.factor(group_var[,1])
       df <- melt(variable, id.vars = "Group")
       
@@ -617,14 +635,14 @@ shinyServer(function(input, output, session) {
   
   #Correlation Table
   makeText2.1.1 <- function(){
-    variable <- process_data()[,colnames(process_data()) %in% selec_var()[[1]],drop = FALSE]
+    variable <- values$data[,colnames(values$data) %in% selec_var()[[1]],drop = FALSE]
     info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
     info
   }
   
   #P Value Table
   makeText2.1.2 <- function(){
-    variable <- process_data()[,colnames(process_data()) %in% selec_var()[[1]],drop = FALSE]
+    variable <- values$data[,colnames(values$data) %in% selec_var()[[1]],drop = FALSE]
     p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
     p.mat
   }
@@ -640,7 +658,7 @@ shinyServer(function(input, output, session) {
         r <- "rho"
       }
       
-      variable <- process_data()[,colnames(process_data()) %in% input$choose_variable2.2,drop = FALSE]
+      variable <- values$data[,colnames(values$data) %in% input$choose_variable2.2,drop = FALSE]
       
       info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
       p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
@@ -749,7 +767,7 @@ shinyServer(function(input, output, session) {
     
     n <- NULL
     for(i in rownames(makeText2.1.2())){
-      df <- process_data()[,colnames(process_data()) %in% c(input$choose_variable_2.3.1,i)]
+      df <- values$data[,colnames(values$data) %in% c(input$choose_variable_2.3.1,i)]
       df <- na.omit(df)
       n <- c(n,length(rownames(df)))
     }
@@ -783,9 +801,9 @@ shinyServer(function(input, output, session) {
   
   #Scatterplot
   makePlot2.3 <- function(text_size){
-    variable <- process_data()[,colnames(process_data()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- process_data()[,colnames(process_data()) %in% selec_var()[[2]], drop = FALSE]
-    ID <- process_data()[,1, drop = F]
+    variable <- values$data[,colnames(values$data) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- values$data[,colnames(values$data) %in% selec_var()[[2]], drop = FALSE]
+    ID <- values$data[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -847,7 +865,7 @@ shinyServer(function(input, output, session) {
     group <- selec_var()[[2]]
     group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     count <- 2
@@ -867,7 +885,7 @@ shinyServer(function(input, output, session) {
   makeText3.1 <- function(){
     variable <- selec_var()[[1]][-194]
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
@@ -909,7 +927,7 @@ shinyServer(function(input, output, session) {
     group <- selec_var()[[2]]
     group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
 
     if(input$type3.1 == 1){
@@ -965,7 +983,7 @@ shinyServer(function(input, output, session) {
       group1 <- data.frame(group1)
     }
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     
     variable <- kNN(variable, k = 5,numFun = weightedMean, weightDist=TRUE)
     n_col <- length(colnames(variable))
@@ -999,7 +1017,7 @@ shinyServer(function(input, output, session) {
       group1 <- data.frame(group1)
     }
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     
     variable <- kNN(variable, k = 5,numFun = weightedMean, weightDist=TRUE)
     n_col <- length(colnames(variable))
@@ -1016,7 +1034,7 @@ shinyServer(function(input, output, session) {
                    distfun = function(x) dist(x,method = input$type4.2),
                    hclustfun = function(x) hclust(x,method = input$type4.3))
     
-    g_name <- process_data()[,1,drop=F]
+    g_name <- values$data[,1,drop=F]
     g_colour <- rep(0,length(group1[,1]))
     
     col <- brewer.pal(12,"Paired")
@@ -1166,7 +1184,7 @@ shinyServer(function(input, output, session) {
       d[2,2] <- as.character(Sys.time())
       d[3,1] <- "Timezone:"
       d[3,2] <- as.character(Sys.timezone())
-      d[4,1] <- "The data is based on the following process_data() and variables :"
+      d[4,1] <- "The data is based on the following values$data and variables :"
       
       nam <- "List of values$data:"
       for (i in input$studyChoices){
@@ -1222,7 +1240,7 @@ shinyServer(function(input, output, session) {
       d[2,2] <- as.character(Sys.time())
       d[3,1] <- "Timezone:"
       d[3,2] <- as.character(Sys.timezone())
-      d[4,1] <- "The data is based on the following process_data() and variables :"
+      d[4,1] <- "The data is based on the following values$data and variables :"
       
       nam <- "List of values$data:"
       for (i in input$studyChoices){
@@ -1625,9 +1643,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$hover_info2.3<- renderPrint({
-    variable <- process_data()[,colnames(process_data()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- process_data()[,colnames(process_data()) %in% selec_var()[[2]], drop = FALSE]
-    ID <- process_data()[,1, drop = F]
+    variable <- values$data[,colnames(values$data) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- values$data[,colnames(values$data) %in% selec_var()[[2]], drop = FALSE]
+    ID <- values$data[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1642,9 +1660,9 @@ shinyServer(function(input, output, session) {
   })
   
   output$brush_info2.3 <- renderPrint({
-    variable <- process_data()[,colnames(process_data()) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
-    group <- process_data()[,colnames(process_data()) %in% selec_var()[[2]], drop = FALSE]
-    ID <- process_data()[,1, drop = F]
+    variable <- values$data[,colnames(values$data) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+    group <- values$data[,colnames(values$data) %in% selec_var()[[2]], drop = FALSE]
+    ID <- values$data[,1, drop = F]
     
     variable_1 <- na.omit(variable)
     group_1 <- group[as.numeric(rownames(variable_1)),]
@@ -1761,7 +1779,7 @@ shinyServer(function(input, output, session) {
     group <- selec_var()[[2]]
     group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
@@ -1773,7 +1791,7 @@ shinyServer(function(input, output, session) {
     }
     
     
-    df <- cbind(process_data()[,1],group,variable,var.pca$x)
+    df <- cbind(values$data[,1],group,variable,var.pca$x)
     
     colnames(df)[1:2] <- c("Subject#", input$choose_group3)
     
@@ -1785,7 +1803,7 @@ shinyServer(function(input, output, session) {
     group <- selec_var()[[2]]
     group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
     
-    rownames(variable) <- process_data()[,1]
+    rownames(variable) <- values$data[,1]
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
     
     if(input$type3.1 == 1){
@@ -1797,7 +1815,7 @@ shinyServer(function(input, output, session) {
     }
     
     
-    df <- cbind(process_data()[,1],group,variable,var.pca$x)
+    df <- cbind(values$data[,1],group,variable,var.pca$x)
     
     colnames(df)[1:2] <- c("Subject#", input$choose_group3)
     
