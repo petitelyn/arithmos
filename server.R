@@ -247,19 +247,25 @@ shinyServer(function(input, output, session) {
     output$mergedTable <- renderTable(values$data)
   })
   
-  switchAcrossName <- observeEvent(input$acrossSearchType, {
-    updateTextInput(session, "acrossSearch", label=paste("Search for a ", tolower(input$acrossSearchType), " across projects"))
+  switchAcrossName <- observeEvent(input$acrossSearchTypeSelect, {
+    updateTextInput(session, "acrossSearch", label=paste("Search for a ", tolower(input$acrossSearchTypeSelect), " across projects"))
+  })
+  
+  output$acrossSearchHelp <- renderUI({
+    tipify(bsButton("pC2", "Help", icon=icon("question-circle"),  size = "extra-small"),
+           "Group = Outcomes of interest    Variables = Other measurements",
+           placement = "right")
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    info_table <- getVariableAcross(values$con, input$acrossSearchType, input$acrossSearch)
+    info_table <- getVariableAcross(values$con, input$acrossSearchTypeSelect, input$acrossSearch)
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
       output$acrossInfo <- renderDataTable(info_table)
       return()
     }
     output$acrossFail <- renderText("")
-    if (!(strcmp(input$acrossSearchType, "Group"))) {
+    if (!(strcmp(input$acrossSearchTypeSelect, "Group"))) {
       for (i in 1:nrow(info_table)) {
         info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[{}\"]", '')
         info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[,]", ', ')
