@@ -13,24 +13,25 @@ dbDisconnect(con)
 shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(
     tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
-  actionButton("restart","",icon=icon("refresh")),
+  textOutput("currentProject"),
   
     tags$script(src="relative_x_scrolling.js"),
     tags$script(
       HTML(
          " 
-          stage = 'load'
           Shiny.addCustomMessageHandler ('switch',function (stage) {
             if (stage == 'load'){
               $('#uploadAndLoad').show()
               $('#acrossSearchPanel').show()
               $('#processing').hide()
+              $('#restart').hide()
               $('#mergedDataPanel').hide()
               $('#viewAndBegin').hide()
               $('#analysisSidebar').hide()
               $('#analysisPanel').hide()
             } else if (stage == 'process'){
               $('#uploadAndLoad').hide()
+              $('#restart').show()
               $('#processing').show()
               $('#acrossSearchPanel').hide()
          } else if (stage == 'view'){
@@ -53,6 +54,9 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
     sidebarLayout(
       sidebarPanel(
         div(id="sidebarPanel",
+            
+        actionButton("restart","",icon=icon("home"), class="initiallyHidden"),
+        
             div(id="uploadAndLoad", 
                 h3("Study Selection", class="no-top"),
                 fileInput('file', 'Upload', multiple = T),
@@ -88,6 +92,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                 hr(),
                 uiOutput('select_func'),
                 #uiOutput("help1"),
+
                 uiOutput('select_var'),
                 uiOutput("help2"),
                 uiOutput("warning1"),
@@ -101,18 +106,18 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                        ".shiny-output-error { visibility: hidden; }",
                        ".shiny-output-error:before { visibility: hidden; }"
                        ),
-            h3("Search Across Projects", class="no-top"),
+            h3(id='searchAcrossHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project"),
+               # actionButton("acrossSearchHelp", "", icon=icon("question"))),
             br(),
-            selectInput("acrossSearchType", "Category to search across", choices=c("Group", "Variable")),
-            textInput("acrossSelect","Search for a value across projects"),
-            actionButton("across", "Search Across"),
+            selectInput("acrossSearchType", "Choose a category to search across", choices=c("Group", "Variable")),
+            textInput("acrossSearch",""),
+            actionButton("across", "Search"),
             textOutput("acrossFail"),
             br(),
             dataTableOutput("acrossInfo")), 
         
         div(id="mergedDataPanel", class="initiallyHidden",
             tableOutput("mergedTable")),
-        
         div(id="analysisPanel", class="initiallyHidden",
             verticalLayout(
               uiOutput("title1"),

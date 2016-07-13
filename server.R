@@ -17,8 +17,9 @@ shinyServer(function(input, output, session) {
   
   restartSession <- observeEvent(input$restart,{
     values$data <- NULL
-    
+    output$helptext <- renderText("")
     session$sendCustomMessage (type="switch", "load")
+    output$currentProject <- renderText("")
   })
   
   updateStudies <- function(current_project) {
@@ -115,16 +116,18 @@ shinyServer(function(input, output, session) {
       study_name_list <- input$studyChoices
       pk_list <- list()
       for (i in 1:length(study_name_list)){
-        incProgress(1/100)
         search_query <- sprintf("SELECT pk FROM study WHERE study_name=\'%s\'", study_name_list[[i]])
         pk_list[i] <- dbGetQuery(values$con, search_query)
       }
+      incProgress(1/2)
       frame <- getStudyDataFrame(values$con, pk_list)
       wide_format <- spread(frame, "new_name", "value")
       values$data <<- wide_format
+      incProgress(1/4)
       output$loadSuccess <- renderText("Data loaded.")
       output$currentProject <- renderText(paste("Project: ", input$projectChoice))
       session$sendCustomMessage (type="switch", "process")
+      incProgress(1/4)
     })
   })
   
@@ -186,10 +189,10 @@ shinyServer(function(input, output, session) {
   
   output$helptext <- renderUI({
     if(length(values$name) == 1){
-      helpText(paste(values$name," has been removed from the dataset since it is a constant variable."))
+      helpText(paste("Note:", values$name," has been removed from the dataset since it is a constant variable."))
     }
     else if(length(values$name) > 1){
-      help_text <- values$name[1]
+      help_text <- paste("Note: ", values$name[1])
       for (i in 2:length(values$name)){
         if(i != length(values$name)){
           help_text <- paste(help_text,values$name[i],sep=", ")
@@ -244,8 +247,12 @@ shinyServer(function(input, output, session) {
     output$mergedTable <- renderTable(values$data)
   })
   
+  switchAcrossName <- observeEvent(input$acrossSearchType, {
+    updateTextInput(session, "acrossSearch", label=paste("Search for a ", tolower(input$acrossSearchType), " across projects"))
+  })
+  
   acrossVariableTable <- observeEvent(input$across, {
-    info_table <- getVariableAcross(values$con, input$acrossSearchType, input$acrossSelect)
+    info_table <- getVariableAcross(values$con, input$acrossSearchType, input$acrossSearch)
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
       output$acrossInfo <- renderDataTable(info_table)
@@ -410,6 +417,7 @@ shinyServer(function(input, output, session) {
   # outputOptions(output, 'help1', suspendWhenHidden=FALSE)
   
   
+
   output$select_var <- renderUI({
     values$data
     actionButton('select_variable', "Select")
@@ -1369,7 +1377,7 @@ shinyServer(function(input, output, session) {
 # Main Page
 ######################################################################################  
   output$title1 <- renderUI({
-    h1(lst[[as.numeric(selec_var()[[3]])]])
+    h1(lst[[as.numeric(selec_var()[[3]])]], class="smaller-margins")
   })
   
   lista <- list()
