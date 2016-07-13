@@ -6,3 +6,10 @@ $(document).scroll(function(e) {
         'left': offset - $(document).scrollLeft()
     });
 });
+
+var leftOffset = parseInt($("#restart").css('left')); //Grab the left position left first
+$(window).scroll(function(){
+    $('#restart').css({
+        'left': $(this).scrollLeft() + leftOffset //Use it later
+    });
+});

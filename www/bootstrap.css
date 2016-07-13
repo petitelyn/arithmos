@@ -39,7 +39,7 @@
 }
 
 #restart {
-  position:absolute;
+  position:fixed;
   top:0;
   right:0;
    color:#222222;
@@ -62,7 +62,7 @@
   
 }
 #viewMerged {
-  width:50%;
+  width:49%;
   color:#222222;
   background-color: transparent;
   border-color: #222222;
