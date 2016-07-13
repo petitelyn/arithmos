@@ -738,8 +738,6 @@ shinyServer(function(input, output, session) {
     dataset <- selec_var()[[1]]
     group <- selec_var()[[2]]
     
-    
-    
     var_name <- NULL
     rho <- NULL
     p_value <- NULL
@@ -1423,7 +1421,7 @@ shinyServer(function(input, output, session) {
   
   listb <- list()
   listb[["1-1"]] <- tagList(radioButtons("select1.1", paste("Select which statistics table to view"), 
-                                         choices = c("Explanatory variable" = 1, "Categorical variable" = 2), inline = T),
+                                         choices = c("Continuous variable" = 1, "Categorical variable" = 2), inline = T),
                             downloadButton('downloadData1.1', 'Download data'),
                             actionButton("help1.1","Help",icon=icon("question-circle")),
                             hidden(verbatimTextOutput("helptext1.1")),
@@ -1593,23 +1591,40 @@ shinyServer(function(input, output, session) {
                                                       "Visualization" = 2)),
                             uiOutput("varInterest"))
   
-  listb[["1-3-1"]] <- tagList(h3("Significance Test"),
-                              
-                              actionButton("help1.3.1","Help",icon=icon("question-circle")),
-                              
+  listb[["1-3-1"]] <- tagList(radioButtons("select1.3.1", paste("Select which table to view"), 
+                                           choices = c("Continuous variable" = 1, "Categorical variable" = 2), inline = T),
                               br(),
+                              h3("Significance Test"),
+                              
+                              downloadButton('downloadData1.3.1', 'Download data'),
+                              actionButton("help1.3.1","Help",icon=icon("question-circle")),
+                              actionButton('get1.3.1', 'Get results'),
+                              
                               
                               hidden(verbatimTextOutput("helptext1.3.1")),
                               
-                              br(),
-                              
-                              h4("Table for explanatory variable"),
-                              dataTableOutput("table1.3.1"),
-                              
-                              br(),
-                              
-                              h4("Table for categorical variables"),
-                              uiOutput("text1.3.2"))
+
+                              uiOutput("table1.3.1"),
+                              dataTableOutput("table1.3.1"))
+  
+  listb[["1-3-2"]] <- NULL
+
+  output$table1.3.1 <- renderUI({
+    if(input$select1.3.1 == 1){
+      makeTable1.3.1()
+    }
+    else{
+      makeTable1.3.2()
+    }
+  })
+  
+  observeEvent(input$help1.3.1, {
+    toggle("helptext1.3.1")
+  })
+  
+  output$helptext1.3.1 <- renderPrint({
+    helpText1.3.1()
+  })
   
   output$table1.3.1 <- renderDataTable({
     makeTable1.3.1()
@@ -1801,8 +1816,10 @@ shinyServer(function(input, output, session) {
     makePlot2.2(10)
   })
   
-  listb[["2-3"]] <- tagList(h3("Significance Table"),
-
+  listb[["2-3"]] <- tagList(radioButtons("select2.3.1", paste("Select which significance table to view"), 
+                                         choices = c("Continuous variable" = 1, "Categorical variable" = 2), inline = T),
+                            h3("Significance Table"),
+                            
                             downloadButton('downloadData2.3', 'Download data'),
                             actionButton("help2.3.1","Help",icon=icon("question-circle")),
                             actionButton('get2.3.1', 'Get results'),
