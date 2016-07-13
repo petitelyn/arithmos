@@ -43,16 +43,14 @@
   margin-bottom:0;
 }
 
-#searchAcrossHeader:hover {
-  text-shadow: 1px 1px #d9d9d9;
-}
-
 
 #currentProject {
+  color:#c3c3c3;
   position:absolute;
-   border: 1px solid black;
-  top:0;
-  right:0;
+   font-size:190%;
+  top:3%;
+  left:25%;
+  font-weight:lighter;
 }
 
 #restart {
@@ -63,7 +61,7 @@
   right:0;
    color:#d3d3d3;
   background-color: transparent;
-  border-color: #d9d9d9;
+  border-color: #d3d3d3;
 }
 
 #restart:hover {
@@ -71,10 +69,15 @@
   border-color:#222222;
 }
 
-#acrossSearchHelp {
-  color:#222222;
+#acrossSearchTypeHelp {
+  color:#d3d3d3;
   background-color: transparent;
-  border-color: #222222;
+  border-color: #d3d3d3;
+}
+
+#acrossSearchTypeHelp:hover {
+   color:#222222;    
+  border-color:#222222;
 }
 
 #preProcess {

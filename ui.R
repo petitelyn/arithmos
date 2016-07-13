@@ -55,7 +55,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
       sidebarPanel(
         div(id="sidebarPanel",
             
-        actionButton("restart","",icon=icon("home"), class="initiallyHidden"),
+        actionButton("restart","",icon=icon("home"), class="faded-button"),
         
             div(id="uploadAndLoad", 
                 h3("Study Selection", class="no-top"),
@@ -66,7 +66,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                 actionButton('load', 'Load')),
             
             div(id="processing", class="initiallyHidden",
-                h3("Data Processing", class="no-top"),
+                h3("Pre-Processing", class="no-top"),
                 numericInput("col_cutoff", label = "Remove columns that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
                 numericInput("row_cutoff", label = "Remove rows that have more than (or equal to) ___ % missing values.", value = 50, min = 0, max = 100),
                 actionButton('preProcess', 'Process')),
@@ -106,10 +106,11 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                        ".shiny-output-error { visibility: hidden; }",
                        ".shiny-output-error:before { visibility: hidden; }"
                        ),
-            h3(id='searchAcrossHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project"),
-               # actionButton("acrossSearchHelp", "", icon=icon("question"))),
+            h3(id='acrossSearchHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project",
+               uiOutput("acrossSearchHelp")
+            ),
             br(),
-            selectInput("acrossSearchType", "Choose a category to search across", choices=c("Group", "Variable")),
+            selectInput("acrossSearchTypeSelect", "Choose a category to search across", choices=c("Group", "Variable")),
             textInput("acrossSearch",""),
             actionButton("across", "Search"),
             textOutput("acrossFail"),
