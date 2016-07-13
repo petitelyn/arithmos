@@ -402,12 +402,12 @@ shinyServer(function(input, output, session) {
   outputOptions(output, 'select_func', suspendWhenHidden=FALSE)
   
   
-  output$help1 <- renderUI({
-    values$data
-    helpText("Click the Select button after you have finished selecting the explanatory variables, 
-              the group variable and the main function.")
-  })
-  outputOptions(output, 'help1', suspendWhenHidden=FALSE)
+  # output$help1 <- renderUI({
+  #   values$data
+  #   helpText("Click the Select button after you have finished selecting the explanatory variables, 
+  #             the group variable and the main function.")
+  # })
+  # outputOptions(output, 'help1', suspendWhenHidden=FALSE)
   
   
   output$select_var <- renderUI({
@@ -445,8 +445,8 @@ shinyServer(function(input, output, session) {
 
   output$help2 <- renderUI({
     selec_var()
-    helpText("You have selected ",length(selec_var()[[1]])," explanatory variables, ",
-             length(selec_var()[[2]]), " explanatory variables as categorical variables and ",lst[[as.numeric(selec_var()[[3]])]],
+    helpText("You have selected ",length(selec_var()[[1]])," continuous variables, ",
+             length(selec_var()[[2]]), " categorical variables and ",lst[[as.numeric(selec_var()[[3]])]],
              " as the main function.")
   })
   outputOptions(output, 'help2', suspendWhenHidden=FALSE)
@@ -726,34 +726,59 @@ shinyServer(function(input, output, session) {
     cat(sprintf(info4), "\n")
   }
   
-  makeText1.3.1 <- reactive({
+  makeTable1.3.1 <- reactive({
     dataset <- selec_var()[[1]]
     group <- selec_var()[[2]]
     
+    
+    
+    var_name <- NULL
+    rho <- NULL
+    p_value <- NULL
+    q_value <- NULL
+    r_squared <- NULL
+    n <- NULL
+    
     #Y(numeric) vs X(numeric)
-    if(input$var_interest %in% selec_var()[[1]]){
-      dataset <- selec_var()[[1]]
+    if(input$var_interest %in% colnames(selec_var()[[1]])){
       varInterest <- dataset[,colnames(dataset) %in% input$var_interest, drop =F]
-      var_name <- NULL
-      rho <- NULL
-      p_value <- NULL
-      q_value <- NULL
-      r_squared <- NULL
-      n <- NULL
       for(i in input$choose_variable){
-        if(i %in% colnames(selec_var()[[1]]) $ i != input$var_interest){
+        if(i %in% colnames(dataset) & i != input$var_interest){
           v <- dataset[,colnames(dataset) %in% i, drop =F]
-          a <- cor.test(var_Interest,v,alternative = "two.sided",method = "spearman")
+          a <- cor.test(varInterest[,1],v[,1],alternative = "two.sided",method = "spearman")
           var_name <- c(var_name,i)
-          p-value <- c(p-value, a$p.value)
+          p_value <- c(p_value, a$p.value)
           rho <- c(rho, a$estimate)
-          r_squared <- c(r_squared, a$estimate)
-          n <- c(n, length(na.omit(cbind(var_name,v))[,1]))
+          r_squared <- c(r_squared, (a$estimate)^2)
+          n <- c(n, length(na.omit(cbind(varInterest,v))[,1]))
         }
       }
-      q_value <- qvalue(p = pvalues)$qvalues
-      #df <- data.frame(n = n, rho = rho, P-value = p_value, Q-value = q_value, R-squared = r_squared)
+      q_value <- qvalue(p = p_value)$qvalues
+      df <- data.frame(variable = var_name, n = n, rho = rho, PValue = p_value, QValue = q_value, Rsquared = r_squared)
+      rownames(df) <- var_name
+      df
     }
+    
+    #Y(categorical) vs X(numeric)
+    else if(input$var_interest %in% colnames(selec_var()[[2]])){
+      varInterest <- group[,colnames(group) %in% input$var_interest, drop =F]
+      for(i in input$choose_variable){
+        if(i %in% colnames(dataset) & i != input$var_interest){
+          v <- dataset[,colnames(dataset) %in% i, drop =F]
+          a <- kruskal.test(varInterest[,1],v[,1])
+          var_name <- c(var_name,i)
+          p_value <- c(p_value, a$p.value)
+          
+          varInterest_char <- as.character(varInterest[,1])
+          varInterest_char[varInterest_char == "NA"] <- NA
+          n <- c(n, length(na.omit(cbind(varInterest_char,v))[,1]))
+        }
+      }
+      q_value <- qvalue(p = p_value)$qvalues
+      df <- data.frame(variable = var_name, n = n, PValue = p_value, QValue = q_value)
+      df
+    }
+
   })
   
   #Boxplot by group
@@ -1571,20 +1596,20 @@ shinyServer(function(input, output, session) {
                               br(),
                               
                               h4("Table for explanatory variable"),
-                              verbatimTextOutput("text1.3.1"),
+                              dataTableOutput("table1.3.1"),
                               
                               br(),
                               
                               h4("Table for categorical variables"),
                               uiOutput("text1.3.2"))
   
-  output$text1.3.1 <- renderPrint({
-    makeText1.3.1()
+  output$table1.3.1 <- renderDataTable({
+    makeTable1.3.1()
   })
   
-  output$text1.3.1 <- renderPrint({
-    makeText1.3.2()
-  })
+  # output$text1.3.2 <- renderPrint({
+  #   makeText1.3.2()
+  # })
   
   output$uiExample1.3 <- renderUI({
     tipify(bsButton("pB13", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
@@ -1597,17 +1622,17 @@ shinyServer(function(input, output, session) {
   
   output$Choice1.3 <- renderUI({
     if(input$select_all1.3 == 2){
-      selectizeInput("choose_variable1.3", "Select variables for the boxplot", choices = selec_var()[[1]], 
+      selectizeInput("choose_variable1.3", "Select variables for the boxplot", choices = colnames(selec_var()[[1]]), 
                      multiple = T)
     }
     else if(input$select_all1.3 == 1){
       if(length(selec_var()[[1]]) > 10){
-        selectInput("choose_variable1.3", "Select variables for the boxplot", choices = selec_var()[[1]], 
-                    multiple = T, selectize = F, selected = selec_var()[[1]], size = 10)
+        selectInput("choose_variable1.3", NULL, choices = colnames(selec_var()[[1]]), 
+                    multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = 10)
       }
       else{
-        selectInput("choose_variable1.3", "Select variables for the boxplot", choices = selec_var()[[1]], 
-                    multiple = T, selectize = F, selected = selec_var()[[1]], size = length(selec_var()[[1]]))
+        selectInput("choose_variable1.3", NULL, choices = colnames(selec_var()[[1]]), 
+                    multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = length(selec_var()[[1]]))
       }
     }
   })
@@ -1680,10 +1705,10 @@ shinyServer(function(input, output, session) {
                       input$col_cutoff, "% missing values.", sep = "")
       
       if(input$select2.1 == 1){
-        d[8,1] <- paste("Title: Correlation Table for Explanatory Variables")
+        d[8,1] <- paste("Title: Correlation Table for Continuous Variables")
       }
       else if(input$select2.1 == 2){
-        d[8,1] <- paste("Title: P-Value Table for Correlation Explanatory Variables")
+        d[8,1] <- paste("Title: P-Value Table for Continuous Variables")
       }
       d[9,1] <- paste("Type of correlation:",input$type2)
       
@@ -1731,7 +1756,7 @@ shinyServer(function(input, output, session) {
   })
   
   output$Select_all2.2 <- renderUI({
-    radioButtons("select_all2.2", paste("Select all", length(colnames(selec_var()[[1]])), "explanatory variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
+    radioButtons("select_all2.2", paste("Select all", length(colnames(selec_var()[[1]])), "continuous variables for the boxplot?"), choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)
   })
   
   output$Choice2.2 <- renderUI({
