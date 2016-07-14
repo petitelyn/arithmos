@@ -1,21 +1,19 @@
 library(RPostgreSQL)
 library(pracma)
+
 connectDatabase <- function(dbname, host, user, port, password) {
   # loads the PostgreSQL driver
+  
   driver <- dbDriver("PostgreSQL")
-  # creates a connection to the postgres database
-  # note that "con" will be used later in each connection to the database
   connection <- dbConnect(driver, dbname = dbname,
                           host = host, port = port,
                           user = user, password = password)
   return(connection)
 }
 
-#connect to a postgresql database
-
-#create current database schema
-#should only be run once
 createDatabase <- function(con) {
+  # Populates the postgreSQL database with tables
+  # should only be run if database is empty
   
   create_project <- "CREATE TABLE project(
   project_code text,
@@ -126,14 +124,15 @@ RETURNS NUMERIC AS $$
   dbGetQuery(con, create_int_to_string_func)
 }
 
+#global code that populates the database if no project table is found
 con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
 if(!(dbExistsTable(con, "project"))) createDatabase(con)
 dbDisconnect(con)
 
-#helper function to check if row exists if not insert
-#could be written as a single query but all solutions I know of 
-#lead to a data race <- maybe not acceptable
 checkInsert <- function(con, table_name, check_column, check_value, column_list, insert_list) {
+  #Checks if row exists, if not inserts 
+  #could possibly be written as a single query but difficult to avoid data race
+  
   check_query <- sprintf("SELECT pk FROM %s WHERE %s=\'%s\'", table_name, check_column, check_value)
   checked_pk <- dbGetQuery(con, check_query)
   if(length(checked_pk) == 0) {
@@ -144,33 +143,38 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
   return(checked_pk)
 }
 
-#parse a study to db given its general info table and actual data table
+#this function is a monster
+#FINISH DOCING
 addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress, error_output) {
-  
-  #arbitrary length because R is super slow appending in for-loop
-  #may need to error check if first lines ever longer than 10
+    #Parses a study into the database
+    #as of now, studies must be in specific STDM format, with a general info sheet and a data sheet
+    #TODO: cleanup the entire function
+    
     return_code <- 0
+    #not indenting because the try/catch is really just wrapping the whole function 
     tryCatch({
     general_info_list <- list()
     general_info_file <- file(general_info_root)
     general_info_lines <- readLines(general_info_file)
-    #again 10 is hard coded
-    index <- 0
-    for (q in 1:100) {
-      #split by any number of commas to be able to account for dynamic row number
-      line <- as.list(strsplit(general_info_lines[[q]], ",+")[[1]])
-      index <- q
-      if (length(line) == 0) next;
-      if (length(line) == 1) next;
-      if (strcmp(line[[1]], "Visit number")) {
-        index <- index + 1
-        break
-      }
-      general_info_list[[line[[1]]]] <- line[[2]]
-    }
+    index <- 1
+    #split by any number of commas to be able to account for dynamic row number
     line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
+    #parse the general info file until 'Visit number' row
+    while (!(strcmp(line[[1]], "Visit number"))) {
+      if (length(line) > 1) {
+        general_info_list[[line[[1]]]] <- line[[2]]
+      }
+      index <- index + 1
+      line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
+    }
+    #must increment index to next line
+    #kind of repeated code, maybe accomplishable with a do-while but I am afraid of R
+    index <- index + 1
+    line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
+    #this is a dictionary for the visit# to the time (in days, weeks, months, etc)
     visit_to_days <- list()
     break_flag <- FALSE
+    #build collect the visit to time length dictionary
     while (!(length(line) == 0)) {
       visit_to_days[[toString(line[[1]])]] <- line[[2]]
       index <- index + 1
@@ -206,6 +210,13 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     sample_type_pk <- strtoi(checkInsert(con, "sample_type", "sample_type", sample_type, c("sample_type"), c(sample_type)))
     lab_pk <- strtoi(checkInsert(con, "lab", "name", lab_name, c("name"), c(lab_name)))
     
+    all_studies <- dbGetQuery(con, sprintf("SELECT study_name FROM project JOIN study ON study.project_pk = project.pk WHERE project.pk=%i", project_pk))
+    for (name in all_studies[["study_name"]]) {
+      if (strcmp(study_name, name)) {
+        print("Study with same name already uploaded.")
+        return(-1)
+      }
+    }
     add_study <- sprintf("INSERT INTO study(study_name, extraction_method_protocol, population_spec, treatment_category_spec,
                          sample_cell_condition, lotnumber, project_pk, sample_type_pk, lab_pk) 
                          VALUES (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %i, %i, %i, %i) RETURNING pk",
@@ -257,7 +268,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
                                                     %in% list("Group", "Subject#", "Remarks", "Timepoint (Visit)", "Barcode", "X"))]
     for (p in 1:length(measurement_names)) {
       variable_name <- name_list[[measurement_names[[p]]]]
-      if (is.null(variable_name)) variable_name <- "NA"
+      if (is.null(variable_name) || nchar(variable_name) == 0 || strcmp(variable_name, " ")) variable_name <- measurement_names[[p]]
       variable_units <- variable_attr_list[["Units"]][[p]]
       if (is.null(variable_units)) variable_units <- "NA"
       variable_name <- str_replace_all(variable_name, "[[:punct:]]", "")
@@ -363,21 +374,10 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     return(return_code)
 }
 
-#retrieve data from n studies with extra column "new names" for conversion to wide format
 getStudyDataFrame <- function(con, study_pks) {
-  # get_variable_names <- sprintf("SELECT name_abbrev
-  #                              FROM measurement
-  #                              JOIN subject ON subject.pk = measurement.subject_pk
-  #                              JOIN study ON study.pk = measurement.study_pk
-  #                              JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
-  #                              WHERE study.pk=%i
-  #                              ORDER BY subject_num, timepoint", study_pk)
-  # 
-  # variable_list <- unique(dbGetQuery(con, get_variable_names)[,"name_abbrev"])
-  # initial_split_string <- "SELECT x.subject_num as \"Subject#\", x.category as \"Group\", x.timepoint as \"Timepoint (Visit)\""
-  # for (l in 1:length(variable_list)) {
-  #   initial_split_string <- paste(initial_split_string, sprintf("split_part(x.value_list, ',', %i) AS \"%s\"", l, paste(variable_list[[l]], toString(study_pk))), sep=", ")
-  # }
+  #Return combined list of all measurements from all studies with primary keys in study_pks
+  #returned format is one measurement per row (neither long nor wide)
+  
   base_query <- "SELECT DISTINCT ON (subject_num, visit, name_abbrev) subject_num as \"Subject#\", igroup as \"Group\", value,
                   name_abbrev || '_' || visit as new_name FROM study JOIN measurement ON measurement.study_pk = study.pk 
                   JOIN subject ON subject.pk = measurement.subject_pk JOIN igroup ON igroup.pk = subject.igroup_pk
@@ -390,15 +390,21 @@ getStudyDataFrame <- function(con, study_pks) {
   return(dbGetQuery(con, base_query))
 }
 
-getVariableAcross <- function(con, search_category, search_query) {
-  info_table <- NULL
-  get_info <- NULL
-  if (strcmp(search_category, "Group")) {
+getGroupAcross <- function(con, search_query) {
+    #Returns table of intervention groups across all projects given the text search_query
+  
     get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" FROM project JOIN study ON study.project_pk = project.pk JOIN
                         measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN
                         igroup ON igroup.pk = subject.igroup_pk WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code", search_query)
-  } else {
-    get_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
+    info_table <- dbGetQuery(con, get_info)
+    return(info_table)
+}
+
+getVariableAcross <- function(con, search_query) {
+  #Returns table of variables across all projects given the text search_query 
+  
+  #ugly query because necessity for two aggregate functions
+  get_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
                                 lower_limit as \"Lower Limit\", protocol_number as \"Protocol\", 
                                  array_agg('(' || days || ',' || count || ')') as \"(Day, Samples)\" FROM 
                                 (SELECT name_full, project_code, unit, upper_limit,
@@ -411,8 +417,6 @@ getVariableAcross <- function(con, search_category, search_query) {
                                 JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
                                 JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, days ORDER BY days) t
                                GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", search_query)
-  }
-  
   info_table <- dbGetQuery(con, get_info)
   return(info_table)
 }

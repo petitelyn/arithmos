@@ -91,6 +91,7 @@ shinyServer(function(input, output, session) {
     updateProjects()
     updateStudies(input$projectChoice)
     progress$close()
+    invalidateLater(0, session)
   })
   
   unloadData <- observeEvent(input$studyChoices, {
@@ -258,7 +259,14 @@ shinyServer(function(input, output, session) {
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    info_table <- getVariableAcross(values$con, input$acrossSearchTypeSelect, input$acrossSearch)
+    #right now only capability for group and variable search
+    #if something strange and dire happens, it defaults to variable (but there should only be two options)
+    info_table <- NULL
+    if (strcmp(input$acrossSearchTypeSelect, "Group")) {
+      info_table <- getGroupAcross(values$con, input$acrossSearch)
+    } else {
+      info_table <- getVariableAcross(values$con, input$acrossSearch)
+    }
     if (nrow(info_table) == 0) {
       output$acrossFail <- renderText("No results.")
       output$acrossInfo <- renderDataTable(info_table)
