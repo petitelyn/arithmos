@@ -990,10 +990,10 @@ shinyServer(function(input, output, session) {
     dataset <- dataset[order(dataset$PValue),]
     info1 <- paste("Most statistically significant variable: ",dataset[1,1])
     info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05))
-    info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+    #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
-    cat(sprintf(info3), "\n")
+    #cat(sprintf(info3), "\n")
   })
   
   helpText1.3.1 <- reactive({
@@ -1009,7 +1009,7 @@ shinyServer(function(input, output, session) {
       info6 <- paste("rho (only continuous variables): Spearman's rank correlation value")
       info7 <- paste("RSquared (only continuous variables): rho^2")
       info8 <- paste("PValue: Significance level")
-      info9 <- paste("QValue: Adjusted P-Value")
+      #info9 <- paste("QValue: Adjusted P-Value")
       info10 <- paste("")   
       info11 <- paste("Method for continuous variables: Spearman's rank correlation test")
       info12 <- paste("Method for categorical variables: Kruskal-Wallis test")
@@ -1022,7 +1022,7 @@ shinyServer(function(input, output, session) {
       cat(sprintf(info6), "\n")
       cat(sprintf(info7), "\n")
       cat(sprintf(info8), "\n")
-      cat(sprintf(info9), "\n")
+      #cat(sprintf(info9), "\n")
       cat(sprintf(info10), "\n")
       cat(sprintf(info11), "\n")
       cat(sprintf(info12), "\n")
@@ -1035,7 +1035,7 @@ shinyServer(function(input, output, session) {
       info4 <- paste("Type: Variable type")
       info5 <- paste("n: Number of paired samples")
       info6 <- paste("PValue: Significance level")
-      info7 <- paste("QValue: Adjusted P-Value")
+      #info7 <- paste("QValue: Adjusted P-Value")
       info8 <- paste("")   
       info9 <- paste("Method for continuous variable: Multinomial Logistic Regression & Likelihood Ratio Test")
       info10 <- paste("Method for categorical variable: Fisher's exact Test")
@@ -1046,7 +1046,7 @@ shinyServer(function(input, output, session) {
       cat(sprintf(info4), "\n")
       cat(sprintf(info5), "\n")
       cat(sprintf(info6), "\n")
-      cat(sprintf(info7), "\n")
+      #cat(sprintf(info7), "\n")
       cat(sprintf(info8), "\n")
       cat(sprintf(info9), "\n")
       cat(sprintf(info10), "\n")
@@ -1404,10 +1404,10 @@ shinyServer(function(input, output, session) {
     dataset[,1] <- as.character(dataset[,1])
     info1 <- paste("Most statistically significant variable: ",dataset[1,1])
     info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05))
-    info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+    #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
     cat(info1, "\n")
     cat(info2, "\n")
-    cat(info3, "\n")
+    #cat(info3, "\n")
   })
   
   helpText2.3.1 <- reactive({
@@ -1425,7 +1425,7 @@ shinyServer(function(input, output, session) {
     info4 <- paste("n: Number of paired samples")
     info5 <- paste(r, " = correlation coefficient", sep = "")
     info6 <- paste("PValue: Significance level")
-    info7 <- paste("QValue: Adjusted P-Value")
+    #info7 <- paste("QValue: Adjusted P-Value")
 
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
@@ -1433,7 +1433,7 @@ shinyServer(function(input, output, session) {
     cat(sprintf(info4), "\n")
     cat(sprintf(info5), "\n")
     cat(sprintf(info6), "\n")
-    cat(sprintf(info7), "\n")
+    #cat(sprintf(info7), "\n")
   })
   
   #Correlation Significance Table
@@ -1466,13 +1466,13 @@ shinyServer(function(input, output, session) {
     df <- df[-which(df[,1] == input$choose_variable_2.3.1),]
     df <- df[is.na(df$PValue) == F,]
     p_value <- df$PValue
-    if(max(p_value) < 0.7){
-      q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-    }
-    else if(max(p_value) >= 0.7){
-      q_value <- qvalue(p_value)$qvalues
-    }
-    df$QValue <- q_value
+    # if(max(p_value) < 0.7){
+    #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+    # }
+    # else if(max(p_value) >= 0.7){
+    #   q_value <- qvalue(p_value)$qvalues
+    # }
+    # df$QValue <- q_value
     df <- df[df$PValue <  input$choose_alpha_level2.3,]
     df <- df[order(df[,3]),]
   })
