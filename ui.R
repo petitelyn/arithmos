@@ -105,12 +105,14 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
                        ".shiny-output-error { visibility: hidden; }",
                        ".shiny-output-error:before { visibility: hidden; }"
                        ),
-            h3(id='acrossSearchHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project",
-               uiOutput("acrossSearchHelp")
+            h3(id='acrossSearchHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project"
             ),
             br(),
             selectInput("acrossSearchTypeSelect", "Choose a category to search across", choices=c("Group", "Variable")),
+            uiOutput("acrossSearchHelp"),
             textInput("acrossSearch",""),
+            uiOutput("acrossTextSearchHelp"),
+            br(),
             actionButton("across", "Search"),
             textOutput("acrossFail"),
             br(),

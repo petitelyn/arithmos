@@ -336,6 +336,11 @@ shinyServer(function(input, output, session) {
            "Group = Outcomes of interest    Variables = Other measurements",
            placement = "right")
   })
+  output$acrossTextSearchHelp <- renderUI({
+    tipify(bsButton("pC3", "Help", icon=icon("question-circle"),  size = "extra-small"),
+           "Enter text into a relaxed search. Partial terms are fine. Searching for nothing returns all possible values",
+           placement = "right")
+  })
   
   acrossVariableTable <- observeEvent(input$across, {
     #right now only capability for group and variable search
