@@ -2931,7 +2931,7 @@ shinyServer(function(input, output, session) {
   })
   
   listb[["4"]] <- tagList(uiOutput("chooseGroup4"),
-                          checkboxInput("displayRow4", "Display Row Dendrogram", value = T),
+                          checkboxInput("displayRow4", "Display Row Dendrogram", value = F),
                           uiOutput("uiExample4"),
                           
                           br(),
