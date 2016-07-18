@@ -73,8 +73,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
             
             div(id="viewAndBegin", class="initiallyHidden", 
                 h3("Results", style="margin-bottom:5%;"), 
-                uiOutput("helptext"),
-                actionButton('viewMerged', 'View', class="btn-primary"),
+                actionButton('viewMerged', 'View dataset', class="btn-primary"),
                 downloadButton("downloadMerged", "Download", class="btn-info"),
                 br(),
                 br(),
@@ -118,6 +117,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
             dataTableOutput("acrossInfo")), 
         
         div(id="mergedDataPanel", class="initiallyHidden",
+            uiOutput("PreText"),
             tableOutput("mergedTable")),
         div(id="analysisPanel", class="initiallyHidden",
             verticalLayout(
