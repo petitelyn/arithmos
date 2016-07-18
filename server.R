@@ -332,8 +332,8 @@ shinyServer(function(input, output, session) {
   })
   
   output$acrossSearchHelp <- renderUI({
-    tipify(bsButton("pC2", "Help", icon=icon("question-circle"),  size = "extra-small"),
-           "Group = Outcomes of interest    Variables = Other measurements",
+    tipify(bsButton("pC4", "Help", icon=icon("question-circle"),  size = "extra-small"),
+           "Group = Outcomes of interest    Variables = Other measurements       Sample type = Cell or tissue type",
            placement = "right")
   })
   output$acrossTextSearchHelp <- renderUI({
