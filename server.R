@@ -24,7 +24,7 @@ shinyServer(function(input, output, session) {
   
   updateStudies <- function(current_project) {
     
-    get_project_pk <- sprintf("SELECT pk FROM project WHERE project_code=\'%s\'", input$projectChoice)
+    get_project_pk <- sprintf("SELECT pk FROM project WHERE project_code=\'%s\'", current_project)
     project_pk <- dbGetQuery(values$con, get_project_pk)[["pk"]]
     get_studies <- sprintf("SELECT study_name FROM study WHERE study.project_pk=%i", project_pk)
     study_list <- dbGetQuery(values$con, get_studies)[["study_name"]]
@@ -88,8 +88,8 @@ shinyServer(function(input, output, session) {
       }
     }
     unlink("TEMPDIR", recursive=TRUE)
-    updateProjects()
     updateStudies(input$projectChoice)
+    updateProjects()
     progress$close()
     invalidateLater(0, session)
   })
@@ -131,7 +131,6 @@ shinyServer(function(input, output, session) {
       incProgress(1/4)
     })
   })
-  
   
   process_data <- observeEvent(input$preProcess, {
     withProgress(message="Processing data", {
@@ -281,19 +280,6 @@ shinyServer(function(input, output, session) {
     }
     output$acrossInfo <- renderDataTable(info_table)
   })
-  
-  # observe({
-  #   if(input$back == T){
-  #     updateCheckboxInput(session,"begin",value=F)
-  #     current_proj <<- input$projectChoice
-  #   }
-  # })
-  # 
-  # observe({
-  #   if(input$begin == T){
-  #     updateCheckboxInput(session,"back",value=F)
-  #   }
-  # })
   
   beginAnalysis <- observeEvent(input$start,{
     session$sendCustomMessage (type="switch", "analysis")

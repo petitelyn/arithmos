@@ -224,6 +224,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
                          treatment_group_specs, sample_condition, strtoi(lotnumber), strtoi(project_pk), strtoi(sample_type_pk), strtoi(lab_pk))
     study_pk <- strtoi(dbGetQuery(con, add_study))},
     error = function(e) {
+      print(e)
       return_code <<- -1
     })
    
@@ -315,6 +316,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     groups <- list()
     timepoints <- list()
     if (!(nrow(subject_data) == 0)) {
+      
       subjects <- subject_data[,"subject_pk"]
       names(subjects) <-  as.character(subject_data[,"subject_num"])
       groups <- group_data[,"igroup_pk"]
@@ -326,6 +328,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       if (strcmp(toString(study_file[i, "Subject#"]),   "NA") == TRUE) {
        break 
       }
+      print(study_file[i,])
       current_group <- as.character(study_file[i, "Group"])
       current_subject <- study_file[i, "Subject#"]
       current_timepoint <- study_file[i, "Timepoint (Visit)"]
@@ -368,10 +371,11 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       subject_pk_cache[[current_subject]] <- subject_pk
       progress$inc(1/(nrow(study_file) * total_studies))
     }}, error = function(e) {
+      print(e)
       dbGetQuery(con, sprintf("DELETE FROM study WHERE study.pk=%i", study_pk))
       return_code <<- -1
     })
-    return(return_code)
+    return(project_pk)
 }
 
 getStudyDataFrame <- function(con, study_pks) {
