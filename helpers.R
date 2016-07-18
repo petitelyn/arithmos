@@ -17,6 +17,8 @@ library(laeken)
 library(qvalue)
 library(nnet)
 library(mlogit)
+library(car)
+library(plyr)
 
 long <- function(file1, file2, common){
   form <- merge(file1, file2, by <- common, all = T)
