@@ -343,12 +343,13 @@ shinyServer(function(input, output, session) {
   })
   
   acrossVariableTable <- observeEvent(input$across, {
-    #right now only capability for group and variable search
-    #if something strange and dire happens, it defaults to variable (but there should only be two options)
+    #right now only capability for group, variable, and sample type
     info_table <- NULL
     if (strcmp(input$acrossSearchTypeSelect, "Group")) {
       info_table <- getGroupAcross(values$con, input$acrossSearch)
-    } else {
+    } else if (strcmp(input$acrossSearchTypeSelect, "Sample Type")) {
+      info_table <- getSampleTypeAcross(values$con, input$acrossSearch)
+    } else if (strcmp(input$acrossSearchTypeSelect, "Variable")) {
       info_table <- getVariableAcross(values$con, input$acrossSearch)
     }
     if (nrow(info_table) == 0) {
@@ -357,7 +358,7 @@ shinyServer(function(input, output, session) {
       return()
     }
     output$acrossFail <- renderText("")
-    if (!(strcmp(input$acrossSearchTypeSelect, "Group"))) {
+    if (strcmp(input$acrossSearchTypeSelect, "Variable")) {
       for (i in 1:nrow(info_table)) {
         info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[{}\"]", '')
         info_table[i,"(Day, Samples)"] <- str_replace_all(info_table[i,"(Day, Samples)"],"[,]", ', ')

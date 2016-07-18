@@ -328,7 +328,6 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       if (strcmp(toString(study_file[i, "Subject#"]),   "NA") == TRUE) {
        break 
       }
-      print(study_file[i,])
       current_group <- as.character(study_file[i, "Group"])
       current_subject <- study_file[i, "Subject#"]
       current_timepoint <- study_file[i, "Timepoint (Visit)"]
@@ -399,9 +398,18 @@ getGroupAcross <- function(con, search_query) {
   
     get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" FROM project JOIN study ON study.project_pk = project.pk JOIN
                         measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN
-                        igroup ON igroup.pk = subject.igroup_pk WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code", search_query)
+                        igroup ON igroup.pk = subject.igroup_pk WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code ORDER BY sample_type", search_query)
     info_table <- dbGetQuery(con, get_info)
     return(info_table)
+}
+
+getSampleTypeAcross <- function(con, search_query) {
+  #Returns table of intervention groups across all projects given the text search_query
+  
+  get_info <- sprintf("SELECT study_name as \"Study Name\", project_code as \"Project\", sample_type as \"Sample Type\" FROM project JOIN study ON study.project_pk = project.pk JOIN
+                      sample_type ON sample_type.pk = study.sample_type_pk WHERE lower(sample_type) LIKE lower(\'%%%s%%\') GROUP BY study_name, project_code, sample_type", search_query)
+  info_table <- dbGetQuery(con, get_info)
+  return(info_table)
 }
 
 getVariableAcross <- function(con, search_query) {

@@ -108,7 +108,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
             h3(id='acrossSearchHeader', "Search Across Projects", class="no-top", title="Search for a text value in a chosen field across every accessible project"
             ),
             br(),
-            selectInput("acrossSearchTypeSelect", "Choose a category to search across", choices=c("Group", "Variable")),
+            selectInput("acrossSearchTypeSelect", "Choose a category to search across", choices=c("Group", "Variable", "Sample Type")),
             uiOutput("acrossSearchHelp"),
             textInput("acrossSearch",""),
             uiOutput("acrossTextSearchHelp"),
