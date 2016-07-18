@@ -937,14 +937,14 @@ shinyServer(function(input, output, session) {
           n <- c(n, length(na.omit(cbind(varInterest_char,v_char))[,1]))
         }
       }
-      if(max(p_value) < 0.7){
-        q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-      }
-      else if(max(p_value) >= 0.7){
-        q_value <- qvalue(p_value)$qvalues
-      }
+      # if(max(p_value) < 0.7){
+      #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+      # }
+      # else if(max(p_value) >= 0.7){
+      #   q_value <- qvalue(p_value)$qvalues
+      # }
   
-      df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, QValue = q_value, Method = method, stringsAsFactors = F)
+      df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, Method = method, stringsAsFactors = F)
     }
     
     #Y(categorical) vs X(numeric,cat)
@@ -981,16 +981,16 @@ shinyServer(function(input, output, session) {
           n <- c(n, length(na.omit(cbind(varInterest,v_char))[,1]))
         }
       }
-      if(max(p_value) < 0.7){
-        q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-      }
-      else if(max(p_value) >= 0.7){
-        q_value <- qvalue(p_value)$qvalues
-      }
+      # if(max(p_value) < 0.7){
+      #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+      # }
+      # else if(max(p_value) >= 0.7){
+      #   q_value <- qvalue(p_value)$qvalues
+      # }
       
       
       
-      df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value,QValue = q_value, Method = method, stringsAsFactors = F)
+      df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value, Method = method, stringsAsFactors = F)
     }
     
     rownames(df) <- var_name
@@ -1749,7 +1749,7 @@ shinyServer(function(input, output, session) {
     g_name <- values$data[,1,drop=F]
     g_colour <- rep(0,length(group1[,1]))
     
-    col <- brewer.pal(12,"Paired")
+    col <- brewer.pal(11,"Spectral")
     
     for (i in 1:length(unique(group1[,1]))){
       for (j in 1:length(group1[,1])){
@@ -1786,7 +1786,7 @@ shinyServer(function(input, output, session) {
     
     heatmap.2(t(variable), Rowv = input$displayRow4, scale ='none', symkey = F, keysize = 1.0, col = cols,
               key = TRUE, key.xlab = "Row Z-Score", density.info="none", trace = "none", main = input$main4, 
-              ColSideColors = group_col, labCol = NULL, labRow = a, margins = c(4,12), cexRow = 1.5,
+              ColSideColors = group_col, labCol = NULL, labRow = a, margins = c(4,14), cexRow = 1.5, cexCol = 1.5,
               distfun = function(x) dist(x,method = "euclidean"),
               hclustfun = function(x) hclust(x,method = "ward"))
     
@@ -2943,6 +2943,7 @@ shinyServer(function(input, output, session) {
                           checkboxInput("displayRow4", "Display Row Dendrogram", value = T),
                           uiOutput("uiExample4"),
                           
+                          br(),
                           br(),
 
                           textInput("main4", "Key in the title of Cluster Dendrogram"),
