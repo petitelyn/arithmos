@@ -84,7 +84,7 @@ STUDY FORMAT
 As of now, the format of studies that can be uploaded is extremeley specific. The file example_study in the miscellaneous folder is an example of the exact (bold) format a study must follow. Important qualifications include:
 *The study must be an xlsm file that comprises of two sheets
 *The first sheet must be the general information sheet
-	*It must outline the ALL of the visit timings found in the data
+	*It must outline the ALL of the visit timings found in the data. Visit must be a number
 	*Every word in the first column (ie Study code, Visit number) must be spelled correctly
 	*Every category that is not defined must be filled in with an NA
 	*The section order (General information, remarks, visit timings) must be the same
@@ -92,6 +92,7 @@ As of now, the format of studies that can be uploaded is extremeley specific. Th
 	*The first section (Analysis remark to No sample availabe) must be in at the start and each defined for every feature (or NA if not applicable)
 	*Subject#, Group, Timepoint (Visit) must all be spelled identically 
 	*Every variable should have a its full name outlined above it. If a variable does not have a full name, copy the variables regular name to the respective cell above it
+	*No variables can have units with micro symbol
 
 In general, if you stick to the given format (which allows for an indiscriminate number of variables), the file should work. With the exception of the actual data, you need to have NAs in spots where the study did not define the specific value.	
 

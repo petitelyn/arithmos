@@ -140,15 +140,16 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
   return(checked_pk)
 }
 
-#this function is a monster
-#FINISH DOCING
 #Parses a study into the database
-#as of now, studies must be in specific STDM format, with a general info sheet and a data sheet
-#TODO: cleanup the entire function
+#see readme for study format requirements
 addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress, error_output) {
+    #this function was put together under time constraints as a quick fix to uploading studies of a specific format
+    #as the project expands to include more lenient file formatting, a totally new function should be built
+    #this function has become a bit of a monster and it would be better to start from scratch
+  
     #this is either -1 for an error or the primary key of the project a study is a part of 
     return_code <- 0
-    #not indenting because the try/catch is really just wrapping the whole function 
+    #not indenting because the two try/catches really just wrap the whole function 
     tryCatch({
     general_info_list <- list()
     general_info_file <- file(general_info_root)
@@ -170,9 +171,11 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     line <- as.list(strsplit(general_info_lines[[index]], ",+")[[1]])
     #this is a dictionary for the visit# to the time (in days, weeks, months, etc)
     visit_to_days <- list()
+    #break off when the lines end
     break_flag <- FALSE
     #build collect the visit to time length dictionary
     while (!(length(line) == 0)) {
+      #hardcoded to the specific position in the given format
       visit_to_days[[toString(line[[1]])]] <- line[[2]]
       index <- index + 1
       tryCatch({
@@ -182,18 +185,28 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       })
       if (break_flag) break
     }
+    #convert all timepoints defined as days, weeks, months, or years to just a numeric number of days
     for(name in names(visit_to_days)) {
+      #skip timepoints where the number of visits is not a number
       if (is.na(as.numeric(name))) next
       time_unit <- sub("[^[:alpha:]]+", "", visit_to_days[[name]])
+      time_length <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]]))
       if (strcmp(time_unit, "days")) {
-        visit_to_days[[name]] <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]]))
+        visit_to_days[[name]] <- time_length
       } else if (strcmp(time_unit, "weeks")) {
-        visit_to_days[[name]] <- strtoi( sub("[^[:digit:]]+", "", visit_to_days[[name]])) * 7
+        visit_to_days[[name]] <-  time_length * 7
+      } else if (strcmp(time_unit, "months")) { 
+        visit_to_days[[name]] <- time_length * 30 
+      }  else if (strcmp(time_unit, "years")) { 
+        visit_to_days[[name]] <- time_length * 365
       } else {
-        visit_to_days[[name]] <- 0
+        #assume the default is days
+        #leaving this here for another default
+        visit_to_days[[name]] <- time_length
       }
     }
     close(general_info_file)
+    #Extract all of the study specific information
     project_code <- general_info_list[["Study code"]][[1]]
     sample_type <- general_info_list[["Sample/Cell type"]][[1]]
     lab_name <- general_info_list[["Lab name"]][[1]]
@@ -202,11 +215,12 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     treatment_group_specs <-  general_info_list[["Specifics on treatment groups"]][[1]]
     sample_condition <- general_info_list[["Special sample/cell condition"]][[1]]
     lotnumber <- strtoi(general_info_list[["Lotnumber"]][[1]])
-    
+    #check to see if the project has been uploaded or not
     project_pk <- strtoi(checkInsert(con, "project", "project_code", project_code, c("project_code"), c(project_code)))
+    #check for sample type and lab
     sample_type_pk <- strtoi(checkInsert(con, "sample_type", "sample_type", sample_type, c("sample_type"), c(sample_type)))
     lab_pk <- strtoi(checkInsert(con, "lab", "name", lab_name, c("name"), c(lab_name)))
-    
+    #get all of the studies, check if a study with the same file name has been uploaded
     all_studies <- dbGetQuery(con, sprintf("SELECT study_name FROM project JOIN study ON study.project_pk = project.pk WHERE project.pk=%i", project_pk))
     for (name in all_studies[["study_name"]]) {
       if (strcmp(study_name, name)) {
@@ -214,6 +228,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
         return(-1)
       }
     }
+    #insert the new study 
     add_study <- sprintf("INSERT INTO study(study_name, extraction_method_protocol, population_spec, treatment_category_spec,
                          sample_cell_condition, lotnumber, project_pk, sample_type_pk, lab_pk) 
                          VALUES (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %i, %i, %i, %i) RETURNING pk",
@@ -224,58 +239,66 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       print(e)
       return_code <<- -1
     })
-   
+    #can't return directly from try/catch
     if(return_code == -1) return(return_code)
     
+    #second try and catch now that a study has been added
+    #if an error occurs after this point, the study is deleted
     tryCatch({
-    #arbitrary 10 again
+    #load the study data
     study_file_con <- file(study_data_root)
+    #build list of variable attributes (units, etc)
     variable_attr_list <- list()
     study_file_lines <- readLines(study_file_con)
     lines_to_skip <- -2
     previous_line <- NULL
     name_list <- list()
     #read the first box w/variable attributes
-    #hardcoded again
+    #the rows before Subject# column is defined
+    #15 is a hard coded number, but based on the specified format it should not go beyond 15
     for (q in 1:15) {
+      #record how many lines to skip when start reading actual file
       lines_to_skip <- lines_to_skip + 1
       line <- as.list(strsplit(study_file_lines[[q]], ",+")[[1]])
+      #skipe empty or null lines
       if (length(line) == 0) next;
       if (length(line) == 1) next;
+      #break when go past Subject# line
       if (!(is.null(previous_line)) && strcmp(previous_line[[1]], "Subject#") == TRUE) break;
       if (strcmp(line[[1]], "Subject#") == TRUE) {
+        #if hit Subject# line, define all the variable names
         abbrev_names = line[which(!line %in% list("Group", "Subject#", "Remarks", "Timepoint (Visit)", "Barcode", "X"))]
         for (t in 1:length(abbrev_names)) {
           name_list[[abbrev_names[[t]]]] <- previous_line[[match(abbrev_names[[t]], line)]]
         }
       }
+      #build variable attribute list
+      #hardcoded for the specified format
       variable_attr_list[[line[[1]]]] <- tail(line, -1)
       previous_line_string <- study_file_lines[[q]]
+      #add a comma to the previous line to be able to split along commas on empty lines
       if (strcmp(substring(previous_line_string, nchar(previous_line_string), nchar(previous_line_string)), ",") == TRUE) {
         previous_line_string <- paste(previous_line_string, ",")
       }
+      #split along commas
       previous_line <- as.list(strsplit(previous_line_string, ",")[[1]])
     }
     close(study_file_con)
+    #read the study file at a new connection on the skpped number of lines. This should start on the Subject# line
     study_file <- read.csv(study_data_root, sep = ',', header = T, skip=lines_to_skip, check.names=FALSE)
     #collect primary keys of variables
     current_variables_pks <- vector(mode="integer", length=1000)
   
-    #loop through all the variables
+    #get all the variables as list
     measurement_names <- colnames(study_file)[which(!colnames(study_file)
                                                     %in% list("Group", "Subject#", "Remarks", "Timepoint (Visit)", "Barcode", "X"))]
+    #loop through and add all variables with their given attributes
     for (p in 1:length(measurement_names)) {
+      #get variable attributes, if null set to defaults
       variable_name <- name_list[[measurement_names[[p]]]]
       if (is.null(variable_name) || nchar(variable_name) == 0 || strcmp(variable_name, " ")) variable_name <- measurement_names[[p]]
       variable_units <- variable_attr_list[["Units"]][[p]]
       if (is.null(variable_units)) variable_units <- "NA"
-      variable_name <- str_replace_all(variable_name, "[[:punct:]]", "")
-      
-      variable_name_pk <- checkInsert(con, "variable_name", "name_abbrev", measurement_names[[p]],
-                                     c("name_abbrev", "name_full"), c(measurement_names[[p]], variable_name))
-      variable_unit_pk <- checkInsert(con, "variable_unit", "unit", variable_units,
-                                     c("unit"), variable_units)
-  
       variable_protocol <- variable_attr_list[["Protocol number analysis"]][[p]]
       if (is.null(variable_protocol)) variable_protocol <- "NA"
       variable_lower_limit <- variable_attr_list[["Lower limit"]][[p]]
@@ -284,6 +307,14 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       if (is.null(variable_upper_limit)) variable_upper_limit <- "NA"
       variable_no_sample <- variable_attr_list[["No sample available"]][[p]]
       if (is.null(variable_no_sample)) variable_no_sample <- "NA"
+      #add the variables, starting in name and units tables
+      variable_name <- str_replace_all(variable_name, "[[:punct:]]", "")
+      
+      variable_name_pk <- checkInsert(con, "variable_name", "name_abbrev", measurement_names[[p]],
+                                     c("name_abbrev", "name_full"), c(measurement_names[[p]], variable_name))
+      variable_unit_pk <- checkInsert(con, "variable_unit", "unit", variable_units,
+                                     c("unit"), variable_units)
+  
       add_variable <- sprintf("INSERT INTO variable(protocol_number, upper_limit, lower_limit, no_sample_available,
                              variable_name_pk, variable_unit_pk)
                              VALUES (\'%s\', \'%s\', \'%s\', \'%s\', %i, %i) RETURNING pk",
@@ -292,7 +323,8 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       variable_pk <- strtoi(dbGetQuery(con, add_variable))
       current_variables_pks[[p]] <- variable_pk
     }
-    subject_pk_cache <- list()
+    #get a cache of the primary keys of the current subjects, groups, and timepoints
+    #this was added to speed up function by avoiding querying every time a new subject/group/timepoint is found
     
     get_subjects <- sprintf("SELECT subject.pk as subject_pk, subject.subject_num FROM project JOIN study ON study.project_pk = project.pk
                                       JOIN measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk
@@ -312,8 +344,8 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     subjects <- list()
     groups <- list()
     timepoints <- list()
+    #if it is a new project with no subjects/groups/timepoints initialize cache lists
     if (!(nrow(subject_data) == 0)) {
-      
       subjects <- subject_data[,"subject_pk"]
       names(subjects) <-  as.character(subject_data[,"subject_num"])
       groups <- group_data[,"igroup_pk"]
@@ -321,15 +353,20 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
       timepoints <- timepoint_data[,"timepoint_pk"]
       names(timepoints) <- as.character(timepoint_data[,"visit"])
     }
+    #loop through actual study rows
     for (i in 1:nrow(study_file)) {
+      #break if subjects row finds NA
       if (strcmp(toString(study_file[i, "Subject#"]),   "NA") == TRUE) {
        break 
       }
+      #get the current subject/group/timepoint
       current_group <- as.character(study_file[i, "Group"])
       current_subject <- study_file[i, "Subject#"]
       current_timepoint <- study_file[i, "Timepoint (Visit)"]
       subject_pk <- NULL
+      #if subject isnt in cache, insert into database and add pk to cache
       if (!(current_subject %in% names(subjects))) {
+        #if group isnt in cache, insert into database and add pk
         if (!(current_group %in% names(groups))) {
           add_group <- sprintf("INSERT INTO igroup(igroup)
                                VALUES (\'%s\') RETURNING pk", current_group)
@@ -342,9 +379,10 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
         subject_pk <- strtoi(dbGetQuery(con, add_subject))
         subjects[[toString(current_subject)]] <- subject_pk
       }
-    
+      #if timepoint not in cache, add timepoint and get pk
       if (!(current_timepoint %in% names(timepoints))) {
         days <- -1
+        #get the day number as recorded earlier
         if (toString(current_timepoint) %in% names(visit_to_days)) {
           days <- visit_to_days[[toString(current_timepoint)]]
         }
@@ -353,20 +391,28 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
         timepoint_pk <- strtoi(dbGetQuery(con, add_timepoint))
         timepoints[[toString(current_timepoint)]] <- timepoint_pk
       }
-      
+      #now get all pks from cache
+      #pks serve as foreign keys for the measurements
       subject_pk <- subjects[[toString(current_subject)]]
       timepoint_pk <- timepoints[[toString(current_timepoint)]]
       insert_all_measurements <- ""
+      #build one gigantic query to add all measurements in a row at once
+      #added to speed up function
       for(j in 1:length(measurement_names)){
         add_measurement <- sprintf("INSERT INTO measurement(value, timepoint_pk, subject_pk, variable_pk, study_pk)
                                    VALUES (\'%s\', %i, %i, %i, %i) RETURNING pk", study_file[i, measurement_names[j]],
                                    timepoint_pk, subject_pk, current_variables_pks[j], study_pk)
         insert_all_measurements <- paste(add_measurement, ";", insert_all_measurements, sep='')
       }
+      #insert all the measurements
       dbGetQuery(con, insert_all_measurements)
-      subject_pk_cache[[current_subject]] <- subject_pk
+      #increment progress
       progress$inc(1/(nrow(study_file) * total_studies))
     }}, error = function(e) {
+      #if there is an error, delete all measurements related to study
+      #note that if there is a weird variable/subject/group uploaded this will not delete that 
+      #the study pk that cascades only ends up deleting the measurements
+      #see the database structure
       print(e)
       dbGetQuery(con, sprintf("DELETE FROM study WHERE study.pk=%i", study_pk))
       return_code <<- -1
