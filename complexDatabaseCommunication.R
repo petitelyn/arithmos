@@ -146,8 +146,7 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
 #as of now, studies must be in specific STDM format, with a general info sheet and a data sheet
 #TODO: cleanup the entire function
 addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress, error_output) {
- 
-    
+    #this is either -1 for an error or the primary key of the project a study is a part of 
     return_code <- 0
     #not indenting because the try/catch is really just wrapping the whole function 
     tryCatch({

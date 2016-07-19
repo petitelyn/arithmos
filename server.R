@@ -83,13 +83,13 @@ shinyServer(function(input, output, session) {
           colnames(dataset)[i] <- gsub("_.*","",colnames(dataset)[i])
         }
         
-        if(gsub("^.*?_","",colnames(dataset)[i]) == 0){
-          colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"At Birth",sep ="_")
-        }
-        
-        if(gsub("^.*?_","",colnames(dataset)[i]) == 5){
-          colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"Week 16",sep ="_")
-        }
+        # if(gsub("^.*?_","",colnames(dataset)[i]) == 0){
+        #   colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"At Birth",sep ="_")
+        # }
+        # 
+        # if(gsub("^.*?_","",colnames(dataset)[i]) == 5){
+        #   colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"Week 16",sep ="_")
+        # }
         
         if(length(unique(na.omit(dataset[,i]))) == 1){
           values$name <<- c(values$name,colnames(dataset[i]))
@@ -765,14 +765,14 @@ shinyServer(function(input, output, session) {
           n <- c(n, length(na.omit(cbind(varInterest_char,v_char))[,1]))
         }
       }
-      if(max(p_value) < 0.7){
-        q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-      }
-      else if(max(p_value) >= 0.7){
-        q_value <- qvalue(p_value)$qvalues
-      }
+      # if(max(p_value) < 0.7){
+      #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+      # }
+      # else if(max(p_value) >= 0.7){
+      #   q_value <- qvalue(p_value)$qvalues
+      # }
   
-      df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, QValue = q_value, Method = method, stringsAsFactors = F)
+      df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, Method = method, stringsAsFactors = F)
     }
     
     #Y(categorical) vs X(numeric,cat)
@@ -809,16 +809,16 @@ shinyServer(function(input, output, session) {
           n <- c(n, length(na.omit(cbind(varInterest,v_char))[,1]))
         }
       }
-      if(max(p_value) < 0.7){
-        q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-      }
-      else if(max(p_value) >= 0.7){
-        q_value <- qvalue(p_value)$qvalues
-      }
+      # if(max(p_value) < 0.7){
+      #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+      # }
+      # else if(max(p_value) >= 0.7){
+      #   q_value <- qvalue(p_value)$qvalues
+      # }
       
       
       
-      df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value,QValue = q_value, Method = method, stringsAsFactors = F)
+      df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value, Method = method, stringsAsFactors = F)
     }
     
     rownames(df) <- var_name
@@ -832,10 +832,10 @@ shinyServer(function(input, output, session) {
     dataset <- dataset[order(dataset$PValue),]
     info1 <- paste("Most statistically significant variable: ",dataset[1,1])
     info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05))
-    info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+    #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
-    cat(sprintf(info3), "\n")
+    #cat(sprintf(info3), "\n")
   })
   
   helpText1.3.1 <- reactive({
@@ -851,7 +851,7 @@ shinyServer(function(input, output, session) {
       info6 <- paste("rho (only continuous variables): Spearman's rank correlation value")
       info7 <- paste("RSquared (only continuous variables): rho^2")
       info8 <- paste("PValue: Significance level")
-      info9 <- paste("QValue: Adjusted P-Value")
+      #info9 <- paste("QValue: Adjusted P-Value")
       info10 <- paste("")   
       info11 <- paste("Method for continuous variables: Spearman's rank correlation test")
       info12 <- paste("Method for categorical variables: Kruskal-Wallis test")
@@ -864,7 +864,7 @@ shinyServer(function(input, output, session) {
       cat(sprintf(info6), "\n")
       cat(sprintf(info7), "\n")
       cat(sprintf(info8), "\n")
-      cat(sprintf(info9), "\n")
+      #cat(sprintf(info9), "\n")
       cat(sprintf(info10), "\n")
       cat(sprintf(info11), "\n")
       cat(sprintf(info12), "\n")
@@ -877,7 +877,7 @@ shinyServer(function(input, output, session) {
       info4 <- paste("Type: Variable type")
       info5 <- paste("n: Number of paired samples")
       info6 <- paste("PValue: Significance level")
-      info7 <- paste("QValue: Adjusted P-Value")
+      #info7 <- paste("QValue: Adjusted P-Value")
       info8 <- paste("")   
       info9 <- paste("Method for continuous variable: Multinomial Logistic Regression & Likelihood Ratio Test")
       info10 <- paste("Method for categorical variable: Fisher's exact Test")
@@ -888,7 +888,7 @@ shinyServer(function(input, output, session) {
       cat(sprintf(info4), "\n")
       cat(sprintf(info5), "\n")
       cat(sprintf(info6), "\n")
-      cat(sprintf(info7), "\n")
+      #cat(sprintf(info7), "\n")
       cat(sprintf(info8), "\n")
       cat(sprintf(info9), "\n")
       cat(sprintf(info10), "\n")
@@ -1246,10 +1246,10 @@ shinyServer(function(input, output, session) {
     dataset[,1] <- as.character(dataset[,1])
     info1 <- paste("Most statistically significant variable: ",dataset[1,1])
     info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05))
-    info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+    #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
     cat(info1, "\n")
     cat(info2, "\n")
-    cat(info3, "\n")
+    #cat(info3, "\n")
   })
   
   helpText2.3.1 <- reactive({
@@ -1267,7 +1267,7 @@ shinyServer(function(input, output, session) {
     info4 <- paste("n: Number of paired samples")
     info5 <- paste(r, " = correlation coefficient", sep = "")
     info6 <- paste("PValue: Significance level")
-    info7 <- paste("QValue: Adjusted P-Value")
+    #info7 <- paste("QValue: Adjusted P-Value")
 
     cat(sprintf(info1), "\n")
     cat(sprintf(info2), "\n")
@@ -1275,7 +1275,7 @@ shinyServer(function(input, output, session) {
     cat(sprintf(info4), "\n")
     cat(sprintf(info5), "\n")
     cat(sprintf(info6), "\n")
-    cat(sprintf(info7), "\n")
+    #cat(sprintf(info7), "\n")
   })
   
   #Correlation Significance Table
@@ -1308,13 +1308,13 @@ shinyServer(function(input, output, session) {
     df <- df[-which(df[,1] == input$choose_variable_2.3.1),]
     df <- df[is.na(df$PValue) == F,]
     p_value <- df$PValue
-    if(max(p_value) < 0.7){
-      q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-    }
-    else if(max(p_value) >= 0.7){
-      q_value <- qvalue(p_value)$qvalues
-    }
-    df$QValue <- q_value
+    # if(max(p_value) < 0.7){
+    #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
+    # }
+    # else if(max(p_value) >= 0.7){
+    #   q_value <- qvalue(p_value)$qvalues
+    # }
+    # df$QValue <- q_value
     df <- df[df$PValue <  input$choose_alpha_level2.3,]
     df <- df[order(df[,3]),]
   })
@@ -1577,7 +1577,12 @@ shinyServer(function(input, output, session) {
     g_name <- values$data[,1,drop=F]
     g_colour <- rep(0,length(group1[,1]))
     
-    col <- brewer.pal(12,"Paired")
+    col1 <- brewer.pal(11,"Spectral")[7]
+    col2 <- brewer.pal(8,"Set1")[c(6,7,8)]
+    col3 <- brewer.pal(8,"Accent")[8]
+    col4 <- brewer.pal(11,"Spectral")[c(1,4)]
+    col5 <- brewer.pal(9,"YlGnBu")[9]
+    col <- c(col2,col1,col3,col4,col5)
     
     for (i in 1:length(unique(group1[,1]))){
       for (j in 1:length(group1[,1])){
@@ -1614,7 +1619,7 @@ shinyServer(function(input, output, session) {
     
     heatmap.2(t(variable), Rowv = input$displayRow4, scale ='none', symkey = F, keysize = 1.0, col = cols,
               key = TRUE, key.xlab = "Row Z-Score", density.info="none", trace = "none", main = input$main4, 
-              ColSideColors = group_col, labCol = NULL, labRow = a, margins = c(4,12), cexRow = 1.5,
+              ColSideColors = group_col, labCol = NULL, labRow = a, margins = c(4,14), cexRow = 1.5, cexCol = 1.5,
               distfun = function(x) dist(x,method = "euclidean"),
               hclustfun = function(x) hclust(x,method = "ward"))
     
@@ -2768,9 +2773,10 @@ shinyServer(function(input, output, session) {
   })
   
   listb[["4"]] <- tagList(uiOutput("chooseGroup4"),
-                          checkboxInput("displayRow4", "Display Row Dendrogram", value = T),
+                          checkboxInput("displayRow4", "Display Row Dendrogram", value = F),
                           uiOutput("uiExample4"),
                           
+                          br(),
                           br(),
 
                           textInput("main4", "Key in the title of Cluster Dendrogram"),
