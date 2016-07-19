@@ -1,61 +1,37 @@
+#file where all of the UI is layed out
+
 library(shiny)
 library(shinyjs)
 library(shinyBS)
 library(plotly)
 
-source("DatabaseCommunication.R")
-
-con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
+#I wish I did not have to import database communication here but the app needs to list the projects from the start
+source("complexDatabaseCommunication.R")
+#get the list of projects currently in the database
+#could not figure out how to use server.R's connection here
+con <- connectDatabase()
 get_projects <- "SELECT project_code FROM project"
 project_list <- dbGetQuery(con, get_projects)[["project_code"]]
 dbDisconnect(con)
+#must disconnect always
 
-shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
+shinyUI(fluidPage(theme="all_css.css", shinyjs::useShinyjs(),
   strong(headerPanel(list(tags$head(
+    #title of project with the place for displaying what current project is
     tags$style("{background-color: black;}")),paste("Arithm","\U00F3","s", " v0.1",sep="")))),
-  textOutput("currentProject"),
-  
+    textOutput("currentProject"),
+    #import the correct scripts
     tags$script(src="relative_x_scrolling.js"),
-    tags$script(
-      HTML(
-         " 
-          Shiny.addCustomMessageHandler ('switch',function (stage) {
-            if (stage == 'load'){
-              $('#uploadAndLoad').show()
-              $('#acrossSearchPanel').show()
-              $('#processing').hide()
-              $('#restart').hide()
-              $('#mergedDataPanel').hide()
-              $('#viewAndBegin').hide()
-              $('#analysisSidebar').hide()
-              $('#analysisPanel').hide()
-            } else if (stage == 'process'){
-              $('#uploadAndLoad').hide()
-              $('#restart').show()
-              $('#processing').show()
-              $('#acrossSearchPanel').hide()
-         } else if (stage == 'view'){
-              $('#viewAndBegin').show()
-              $('#mergedDataPanel').show()
-         } else if (stage == 'analysis'){
-         $('#acrossSearchPanel').hide()
-         $('#mergedDataPanel').hide()
-         $('#processing').hide()
-         $('#viewAndBegin').hide()
-         $('#analysisSidebar').show()
-         $('#analysisPanel').show()
-         }
-            
-         });
-      "     
-      )
-    ),
+    tags$script(src="switch.js"),
     hr(style="width:100%;"), 
+  
+    #entire app built with shiny sidebarLayout class
     sidebarLayout(
       sidebarPanel(
         div(id="sidebarPanel",
             
-        actionButton("restart","",icon=icon("home"), class="faded-button"),
+          #restart button, persistent in the sidebar panel
+          actionButton("restart","",icon=icon("home"), class="faded-button"),
         
             div(id="uploadAndLoad", 
                 h3("Study Selection", class="no-top"),
@@ -101,6 +77,7 @@ shinyUI(fluidPage(theme="bootstrap.css", shinyjs::useShinyjs(),
       mainPanel(
         div(id="mainPanel",
         div(id="acrossSearchPanel",
+            #the following tags keep errors from being displayed in
             tags$style(type="text/css",
                        ".shiny-output-error { visibility: hidden; }",
                        ".shiny-output-error:before { visibility: hidden; }"
