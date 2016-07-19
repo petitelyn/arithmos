@@ -1,19 +1,22 @@
+#file where all the complex database communication takes place
+
 library(RPostgreSQL)
 library(pracma)
 
-connectDatabase <- function(dbname, host, user, port, password) {
-  # loads the PostgreSQL driver
-  
+#create database connection
+#database values hard coded here
+connectDatabase <- function() {
   driver <- dbDriver("PostgreSQL")
-  connection <- dbConnect(driver, dbname = dbname,
-                          host = host, port = port,
-                          user = user, password = password)
+  connection <- dbConnect(driver, dbname = "arithmos",
+                          host = "localhost", port = "5432",
+                          user = "postgres", password = "Passw0rd")
   return(connection)
 }
 
+#Populates the postgreSQL database with tables
+#should only be run if database is empty
+#more here to document the structure of the database
 createDatabase <- function(con) {
-  # Populates the postgreSQL database with tables
-  # should only be run if database is empty
   
   create_project <- "CREATE TABLE project(
   project_code text,
@@ -124,15 +127,9 @@ RETURNS NUMERIC AS $$
   dbGetQuery(con, create_int_to_string_func)
 }
 
-#global code that populates the database if no project table is found
-con <- connectDatabase("postgres", "localhost", "postgres", 5432, "Passw0rd")
-if(!(dbExistsTable(con, "project"))) createDatabase(con)
-dbDisconnect(con)
-
+#helper function to check if a row has been inserted, insert it if it hasn't, and return primary key
 checkInsert <- function(con, table_name, check_column, check_value, column_list, insert_list) {
-  #Checks if row exists, if not inserts 
   #could possibly be written as a single query but difficult to avoid data race
-  
   check_query <- sprintf("SELECT pk FROM %s WHERE %s=\'%s\'", table_name, check_column, check_value)
   checked_pk <- dbGetQuery(con, check_query)
   if(length(checked_pk) == 0) {
@@ -145,11 +142,11 @@ checkInsert <- function(con, table_name, check_column, check_value, column_list,
 
 #this function is a monster
 #FINISH DOCING
+#Parses a study into the database
+#as of now, studies must be in specific STDM format, with a general info sheet and a data sheet
+#TODO: cleanup the entire function
 addStudy <- function(con, general_info_root, study_data_root, study_name, total_studies, progress, error_output) {
-    #Parses a study into the database
-    #as of now, studies must be in specific STDM format, with a general info sheet and a data sheet
-    #TODO: cleanup the entire function
-    
+    #this is either -1 for an error or the primary key of the project a study is a part of 
     return_code <- 0
     #not indenting because the try/catch is really just wrapping the whole function 
     tryCatch({
@@ -377,9 +374,9 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     return(project_pk)
 }
 
-getStudyDataFrame <- function(con, study_pks) {
-  #Return combined list of all measurements from all studies with primary keys in study_pks
-  #returned format is one measurement per row (neither long nor wide)
+#Return combined list of all measurements from all studies with primary keys in study_pks
+#returned format is one measurement per row (neither long nor wide)
+getStudyDataWideFormat <- function(con, study_pks) {
   
   base_query <- "SELECT DISTINCT ON (subject_num, visit, name_abbrev) subject_num as \"Subject#\", igroup as \"Group\", value,
                   name_abbrev || '_' || visit as new_name FROM study JOIN measurement ON measurement.study_pk = study.pk 
@@ -390,30 +387,38 @@ getStudyDataFrame <- function(con, study_pks) {
     base_query <- paste(base_query, sprintf("study.pk=%i OR", strtoi(study_pks[i])))
   }
   base_query <- paste(base_query, sprintf("study.pk=%i ORDER BY subject_num, visit, name_abbrev", strtoi(study_pks[length(study_pks)])))
-  return(dbGetQuery(con, base_query))
+  one_line_format <- dbGetQuery(con, base_query)
+  wide_format <- spread(one_line_format, "new_name", "value")
+  return(wide_format)
 }
 
+#Returns table of intervention groups across all projects given the text search_query
 getGroupAcross <- function(con, search_query) {
-    #Returns table of intervention groups across all projects given the text search_query
   
-    get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" FROM project JOIN study ON study.project_pk = project.pk JOIN
+    get_info <- sprintf("SELECT igroup as \"Group\", project_code as \"Project\", count(DISTINCT subject_num) as \"Number of Subjects\" 
+                        FROM project JOIN study ON study.project_pk = project.pk JOIN
                         measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk JOIN
-                        igroup ON igroup.pk = subject.igroup_pk WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code ORDER BY sample_type", search_query)
+                        igroup ON igroup.pk = subject.igroup_pk
+                        WHERE lower(igroup) LIKE lower(\'%%%s%%\') GROUP BY igroup, project_code ORDER BY igroup, project_code", search_query)
     info_table <- dbGetQuery(con, get_info)
     return(info_table)
 }
 
+
+#Returns table of sample types across all projects given the text search_query
 getSampleTypeAcross <- function(con, search_query) {
-  #Returns table of intervention groups across all projects given the text search_query
   
-  get_info <- sprintf("SELECT study_name as \"Study Name\", project_code as \"Project\", sample_type as \"Sample Type\" FROM project JOIN study ON study.project_pk = project.pk JOIN
-                      sample_type ON sample_type.pk = study.sample_type_pk WHERE lower(sample_type) LIKE lower(\'%%%s%%\') GROUP BY study_name, project_code, sample_type", search_query)
+  get_info <- sprintf("SELECT study_name as \"Study Name\", project_code as \"Project\", sample_type as \"Sample Type\" FROM project 
+                      JOIN study ON study.project_pk = project.pk JOIN
+                      sample_type ON sample_type.pk = study.sample_type_pk 
+                      WHERE lower(sample_type) LIKE lower(\'%%%s%%\') GROUP BY study_name, project_code, sample_type ORDER BY sample_type, project_code", search_query)
   info_table <- dbGetQuery(con, get_info)
   return(info_table)
 }
 
+
+#Returns table of variables across all projects given the text search_query 
 getVariableAcross <- function(con, search_query) {
-  #Returns table of variables across all projects given the text search_query 
   
   #ugly query because necessity for two aggregate functions
   get_info <- sprintf("SELECT name_full as \"Name\", project_code as \"Project\", unit as \"Units\", upper_limit as \"Upper Limit\", 
@@ -427,8 +432,10 @@ getVariableAcross <- function(con, search_query) {
                                 FROM project JOIN study ON study.project_pk = project.pk JOIN measurement ON measurement.study_pk = study.pk
                                 JOIN timepoint ON timepoint.pk = measurement.timepoint_pk 
                                 JOIN variable ON variable.pk = measurement.variable_pk JOIN variable_name ON variable_name.pk = variable.variable_name_pk
-                                JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number, days ORDER BY days) t
-                               GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY project_code", search_query)
+                                JOIN variable_unit ON variable_unit.pk = variable.variable_unit_pk 
+                                WHERE lower(name_full) LIKE lower(\'%%%s%%\') GROUP BY name_full, project_code, 
+                                unit, upper_limit, lower_limit, protocol_number, days ORDER BY days) t
+                               GROUP BY name_full, project_code, unit, upper_limit, lower_limit, protocol_number ORDER BY name_full, project_code", search_query)
   info_table <- dbGetQuery(con, get_info)
   return(info_table)
 }

@@ -1,3 +1,4 @@
+/*this is a free bootstrap 'cosmo' theme taken from bootswatch.com */
 @import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700");
 /*!
  * bootswatch v3.3.6
@@ -12,128 +13,136 @@
  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/master/LICENSE)
  */
 /*! normalize.css v3.0.3 | MIT License | github.com/necolas/normalize.css */
-/*Custom CSS*/
-.initiallyHidden {
-  display: none; 
-}
 
-.smaller-margins {
-  margin-top:0%;
-  margin-bottom:0%;
-}
-
-.well {
-  position: fixed;
-  min-height: 1px;
-  max-height: 80%;
-  padding-left: 15px;
-  padding-right: 15px;
-  z-index:10000;
-  width:32%;
-  overflow-y:auto;
-  padding-bottom:5%;
-}
-
-.no-top {
-  margin-top:0;
-}
-
-.no-margins {
-  margin-top:0;
-  margin-bottom:0;
-}
-
-
-#currentProject {
-  color:#c3c3c3;
-  position:absolute;
-  font-size:190%;
-  top:3%;
-  left:25%;
-  font-weight:lighter;
-}
-
-#restart {
-  display:none;
-  position:absolute;
+/*Custom CSS
+* here is all of the CSS I personally implemented
+* I am an inexperienced front end developer so these are probably not implemented optimally
+*/
+  .initiallyHidden {
+    display: none; 
+  }
   
-  top:0;
-  right:0;
-   color:#d3d3d3;
-  background-color: transparent;
-  border-color: #d3d3d3;
-}
-
-#restart:hover {
-  color:#222222;    
-  border-color:#222222;
-}
-
-#acrossSearchTypeHelp {
-  color:#d3d3d3;
-  background-color: transparent;
-  border-color: #d3d3d3;
-}
-
-#acrossSearchTypeHelp:hover {
-   color:#222222;    
-  border-color:#222222;
-}
-
-#preProcess {
-  width:100%;
-}
-
-#start {
-  width:100%;
-}
-#downloadMerged {
-  width:49%;
- color:#222222;
-  background-color: transparent;
-  border-color: #222222;
+  .smaller-margins {
+    margin-top:0%;
+    margin-bottom:0%;
+  }
   
-}
-#viewMerged {
-  width:49%;
-  color:#222222;
-  background-color: transparent;
-  border-color: #222222;
-}
-#load {
-  width:100%;
-}
-#across {
-  width:45%;
-}
-#select_variable {
-  width:100%;
-}
-#back {
-  color:#222222;
-  background-color: transparent;
-  border-color: #222222;
-  width:1%;
-  height:1%;
-}
-#mainPanel {
-    min-height: 0;
-  padding: 19px;
-  display:table;
-  width:100%;
-  overflow:scroll;
-  margin-bottom: 20px;
-  background-color: #ffffff;
-  border: 1px solid #e3e3e3;
-  border-radius: 0;
-  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
-}
-#mainPanel:empty
-{
+  /*css for the left panel
+  * This would be better implemented as an ID but I could not get it to work
+  */
+  .well {
+    position: fixed;
+    min-height: 1px;
+    max-height: 80%;
+    padding-left: 15px;
+    padding-right: 15px;
+    z-index:10000;
+    width:32%;
+    overflow-y:auto;
+    padding-bottom:5%;
+  }
+  
+  .no-top {
+    margin-top:0;
+  }
+  
+  .no-margins {
+    margin-top:0;
+    margin-bottom:0;
+  }
+  
+  
+  #currentProject {
+    color:#c3c3c3;
+    position:absolute;
+    font-size:190%;
+    top:3%;
+    left:25%;
+    font-weight:lighter;
+  }
+  
+  #restart {
     display:none;
-}
-/* End */
+    position:absolute;
+    
+    top:0;
+    right:0;
+     color:#d3d3d3;
+    background-color: transparent;
+    border-color: #d3d3d3;
+  }
+  
+  #restart:hover {
+    color:#222222;    
+    border-color:#222222;
+  }
+  
+  #acrossSearchTypeHelp {
+    color:#d3d3d3;
+    background-color: transparent;
+    border-color: #d3d3d3;
+  }
+  
+  #acrossSearchTypeHelp:hover {
+     color:#222222;    
+    border-color:#222222;
+  }
+  
+  #preProcess {
+    width:100%;
+  }
+  
+  #start {
+    width:100%;
+  }
+  #downloadMerged {
+    width:49%;
+   color:#222222;
+    background-color: transparent;
+    border-color: #222222;
+    
+  }
+  #viewMerged {
+    width:49%;
+    color:#222222;
+    background-color: transparent;
+    border-color: #222222;
+  }
+  #load {
+    width:100%;
+  }
+  #across {
+    width:45%;
+  }
+  #select_variable {
+    width:100%;
+  }
+  #back {
+    color:#222222;
+    background-color: transparent;
+    border-color: #222222;
+    width:1%;
+    height:1%;
+  }
+  #mainPanel {
+      min-height: 0;
+    padding: 19px;
+    display:table;
+    width:100%;
+    overflow:scroll;
+    margin-bottom: 20px;
+    background-color: #ffffff;
+    border: 1px solid #e3e3e3;
+    border-radius: 0;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.05);
+  }
+  #mainPanel:empty
+  {
+      display:none;
+  }
+/* End of my custom CSS. The rest is the bootswatch theme */
+
 html {
   font-family: sans-serif;
   -ms-text-size-adjust: 100%;

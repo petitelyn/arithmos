@@ -1,3 +1,5 @@
+//javascript file that keeps the lefthand panel from being persistent while scrolling horizontally
+
 var offset = 15; // left offset of the fixed div (without scrolling)
 
 $(document).scroll(function(e) {
