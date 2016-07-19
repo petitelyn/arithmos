@@ -18,7 +18,6 @@ REQUIREMENTS
 ---------------------
 
 Arithmos is built using the Shiny, a web application framework for R developed by RStudio. Along with the obvious requirements of R and Shiny server, the following packages are required to run the application: 
-
  
 *XLConnectJars: Read xlsx and xlsm files
 *XLConnect: Read xlsx and xlsm files
@@ -51,10 +50,11 @@ CODE ARCHITECTURE
 Arithmos follows Shiny's recommended structural pattern with a second layer of file separation for increased organization. Along with the required server.R and ui.R, code is loosely split up based on proximity in the UI. The code is comprised of the following files:
 
 *server.R: Server-related code. Since shiny needs ALL non-UI code to be found here, server.R imports all other non-UI files 
-*complexDatabaseCommunication.R: Any code involving multi-line database interaction. Queries elsewhere are simple enough to not merit their own function here
+*complexDatabaseCommunication.R: Any code involving multi-line database interactions
 *startPanel.R: Code employed by the left-hand panel on the start page of the application, involving uploading files and loading data
 *helpers.R: Imports and related helper functions are found
-
+*analysisSidebar.R: Renderings for the sidebar during the analysis phase
+*analysisPage.R: Code for rendering the different analysis
 *statisticsTable.R: Contains all the functions used for statistics table
 *statisticsBoxplot.R: Contains all the functions used for basic boxplot
 *statisticsDiffAnal.R: Contains all the functions used for differntial analysis
@@ -71,7 +71,7 @@ Arithmos follows Shiny's recommended structural pattern with a second layer of f
 *www/all_css.css: All CSS is found here. Primarily a theme taken from bootswatch.com. Custom css is found at the beginning
 *www/relative_x_scrolling.js: A javascript function that keeps the persistent side panel from staying persistent with horizontal scrolling
 *www/switch.js: A javascript function that controls the UI flow
-NOTE: All front-end files (javascript, css, etc) must be found in the www folder for access from ui.R
+NOTE: All front-end files (javascript, css, resources) must be found in the www folder for access from ui.R
 
 CONFIGURATION
 ---------------------
@@ -100,5 +100,8 @@ CREDITS
 
 Arithmos v0.1 was built by interns Gabriel Gardner and Alfrad Chew, overseen by Mei Lyn Ong of the Immunology team at the Singapore R&D center for Danone Nutricia. Contact info follows:
 
-Gabriel Gardner (former employee): gabrielgardner@icloud.com
-Alfrad Chew: cswa_1992@hotmail.com 
+Gabriel Gardner: Database Designer 
+		CONTACT: gabrielgardner@icloud.com
+Alfrad Chew: Statistician 
+		CONTACT: cswa_1992@hotmail.com 
+

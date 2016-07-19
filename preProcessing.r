@@ -215,3 +215,15 @@ observeEvent(input$viewMerged, {
     }
   )
 })
+
+
+beginAnalysis <- observeEvent(input$start,{
+  session$sendCustomMessage (type="switch", "analysis")
+})
+
+restartButton <- observeEvent(input$restart,{
+  #operations to perform upon restarting a session (hitting the home button)
+  values$data <- NULL
+  session$sendCustomMessage (type="switch", "load")
+  output$currentProject <- renderText("")
+})
