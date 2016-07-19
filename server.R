@@ -182,13 +182,13 @@ shinyServer(function(input, output, session) {
           colnames(dataset)[i] <- gsub("_.*","",colnames(dataset)[i])
         }
         
-        if(gsub("^.*?_","",colnames(dataset)[i]) == 0){
-          colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"At Birth",sep ="_")
-        }
-        
-        if(gsub("^.*?_","",colnames(dataset)[i]) == 5){
-          colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"Week 16",sep ="_")
-        }
+        # if(gsub("^.*?_","",colnames(dataset)[i]) == 0){
+        #   colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"At Birth",sep ="_")
+        # }
+        # 
+        # if(gsub("^.*?_","",colnames(dataset)[i]) == 5){
+        #   colnames(dataset)[i] <- paste(gsub("_.*","",colnames(dataset)[i]),"Week 16",sep ="_")
+        # }
         
         if(length(unique(na.omit(dataset[,i]))) == 1){
           values$name <<- c(values$name,colnames(dataset[i]))
@@ -1741,7 +1741,12 @@ shinyServer(function(input, output, session) {
     g_name <- values$data[,1,drop=F]
     g_colour <- rep(0,length(group1[,1]))
     
-    col <- brewer.pal(11,"Spectral")
+    col1 <- brewer.pal(11,"Spectral")[7]
+    col2 <- brewer.pal(8,"Set1")[c(6,7,8)]
+    col3 <- brewer.pal(8,"Accent")[8]
+    col4 <- brewer.pal(11,"Spectral")[c(1,4)]
+    col5 <- brewer.pal(9,"YlGnBu")[9]
+    col <- c(col2,col1,col3,col4,col5)
     
     for (i in 1:length(unique(group1[,1]))){
       for (j in 1:length(group1[,1])){
