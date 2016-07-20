@@ -1,0 +1,11 @@
+measurement
+study
+variable
+subject
+variable_unit
+variable_name
+timepoint
+sample_type
+project
+lab
+igroup
