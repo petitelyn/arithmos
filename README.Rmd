@@ -149,6 +149,7 @@ Improvements looking forward:
  * The xlsm format appears to encode mu incorrectly, so you must currently change units like micrograms to ug
  * The user interface could use a new section where a user could change a previously uploaded value. Right now to correct the database you need to know postgresql and have access
  * The current UI pattern for hiding/showing elements based on sections is not sustainable if the app continues to grow. Perhaps modularizing into different Shiny apps is the best next step, because one Shiny app can only be one html page
+ * Database user security
 
 
 CREDITS
