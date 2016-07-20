@@ -128,8 +128,10 @@ loadData <- observeEvent(input$load, {
         num <- c(num,i)
       }
     }
-    num <- -num
-    wide_format <- wide_format[,num]
+    if(length(num > 0)){
+      num <- -num
+      wide_format <- wide_format[,num]
+    }
     
     #load copy of data for processing
     values$data <<- wide_format

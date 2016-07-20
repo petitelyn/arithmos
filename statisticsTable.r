@@ -45,8 +45,11 @@ makeText1.1 <- reactive({
           
         }
       }
+      
+      #Insert an open and close bracket to the concatenated names and samples of the group
       row_nam <- paste(colnames(cat_var)[i], " (", row_nam, ") ", sep="")
       n_nam <- paste("(",n_nam,")",sep="")
+      
       row_names <- c(row_names,row_nam)
       n <- c(n,n_nam)
     }
@@ -85,9 +88,16 @@ helpText1.1 <- reactive({
   }
   else if(input$select1.1 == 2){
     cat_var <- selec_var()[[2]]
+    #Counts the number of samples in each categorical variable
     a <- table(cat_var[,1])
+    
+    #Number of samples in the first group in the first categorical variable
     text_num <- a[names(a)==unique(cat_var[,1])[1]]
+    #Name of the first group in the first categorical variable
     text_group <- unique(cat_var[,1])[1]
+    
+    #Concatenate the group names and number of samples if the number of groups in the first
+    #categorical variable is greater than 1
     if(length(unique(cat_var[,1])) > 1){
       for(i in 2:length(unique(cat_var[,1]))){
         if(i != length(unique(cat_var[,1]))){
@@ -100,6 +110,7 @@ helpText1.1 <- reactive({
         }
       }
     }
+    
     info1 <- paste("The table below displays the sample size of each group for each categorical variable.")
     info2 <- paste("")
     info3 <- paste("i.e.",colnames(cat_var)[1], " has ",

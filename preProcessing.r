@@ -75,8 +75,8 @@ makePreText <- function(){
   
   info1 <- paste("Total number of samples before pre-processing:", length(full_dataset[,1]))
   info2 <- paste("Total number of variables before pre-processing:",length(colnames(full_dataset[-1])))
-  info3 <- paste("Remaining number of samples before after-processing:", length(proc_dataset[,1]))
-  info4 <- paste("Remaining number of variables before after-processing:",length(colnames(proc_dataset[-1])))
+  info3 <- paste("Remaining number of samples after pre-processing:", length(proc_dataset[,1]))
+  info4 <- paste("Remaining number of variables after pre-processing:",length(colnames(proc_dataset[-1])))
   info5 <- paste("")
   
   sample_removed <- NULL
@@ -93,14 +93,16 @@ makePreText <- function(){
     if(gsub("^.*?_","",i) == -1){
       i <- gsub("_.*","",i)
     }
-    if(gsub("^.*?_","",i) == 0){
-      i <- paste(gsub("_.*","",i),"At Birth",sep ="_")
-    }
-    if(gsub("^.*?_","",i) == 5){
-      i <- paste(gsub("_.*","",i),"Week 16",sep ="_")
-    }
+    # if(gsub("^.*?_","",i) == 0){
+    #   i <- paste(gsub("_.*","",i),"At Birth",sep ="_")
+    # }
+    # if(gsub("^.*?_","",i) == 5){
+    #   i <- paste(gsub("_.*","",i),"Week 16",sep ="_")
+    # }
     if(!i %in% colnames(proc_dataset)){
-      var_removed <- c(var_removed,i)
+      if(!i %in% constVar_removed){
+        var_removed <- c(var_removed,i)
+      }
     }
   }
   
