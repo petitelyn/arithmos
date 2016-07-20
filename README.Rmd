@@ -1,0 +1,164 @@
+#**ARITHMOS v0.1 DOCUMENTATION**
+
+CONTENTS OF THIS FILE
+---------------------
+ * [Introduction](#introduction)
+ * [Requirements](#requirements)
+ * [Code Architecture](#code-architecture)
+ * [Database Architecture](#database-architecture)
+ * [Configuration](#configuration)
+ * [Study Format](#study-format)
+ * [Converting a Study](#converting-a-study)
+ * [Todo](#todo)
+ * [Credits](#credits)
+
+INTRODUCTION 
+---------------------
+
+  Arithmos is a private statistics tool for Danone Nutricia Research Centre. The goal of the project is to have in-house statistics software built on top of a private database so scientists can run analyses easily and without file manipulation. 
+ 
+REQUIREMENTS
+---------------------
+
+Arithmos is built using the Shiny, a web application framework for R developed by RStudio. Along with the obvious requirements of R and Shiny server, the following packages are required to run the application: 
+ 
+ * __car__: Provides the function "ANOVA" for multivariate logistic regression models
+ * __ggplot2__: To plot boxplot, scatterplot, barplot, correlation plot and PCA biplot
+ * __gplots__: Provides the function "heatmap.2'
+ * __heatmaply__: Provides interactive heatmap
+ * __laeken__: Provides the function "weightedMean" for "kNN" function
+ * __missMDA__: Provides the function "imputePCA" to impute missing values of PCA
+ * __nnet__: Provides the function "multinom" for multivariate logistic regression models
+ * __plotly__: Enables interactive plots on shiny
+ * __plotly__: Provides interactive plot
+ * __plyr__: Provides the function "ddply" for the barplot and PCA biplot
+ * __pracma__: For the strcmp function
+ * __psych__: Gives the "describe" function which displays basic statistics of a variable such as mean and median
+ * __qvalue__: Computes Q value
+ * __RColorBrewer__: Provides more options for type of colours used for heatmaps
+ * __reshape2__: Converts variable to long/wide format
+ * __RPostgreSQL__: For communication with the database
+ * __shiny__: For shiny server
+ * __shinyBS__: Provides the "bsButton" feature
+ * __shinyjs__: Provides the "hidden" function
+ * __stringr__: Deals with partial selection of a string
+ * __tidyr__: For PCA biplot
+ * __VIM__: Provides the function "kNN" to imput missing values for hierarchical clustering
+ * __XLConnect__: Read xlsx and xlsm files
+ * __XLConnectJars__: Read xlsx and xlsm files
+
+CODE ARCHITECTURE
+---------------------
+
+Arithmos follows Shiny's recommended structural pattern, along with a second layer of file separation for increased organization. Code is loosely split up based on proximity in the UI. The code is comprised of the following files:
+
+ * __server.R__: Server-related code. Since shiny needs ALL non-UI code to be found here, server.R imports all other non-UI files 
+ * __complexDatabaseCommunication.R__: Any code involving multi-line database interactions
+ * __helpers.R__: Imports and related helper functions are found
+ * __ui.R__: Code for the UI built through shiny's custom functions
+ * __server_modules__: Directory containing modules imported into server.R
+     * __startPanel.R__: Code employed by the left-hand panel on the start page of the application, involving uploading files and loading data
+     * __analysisSidebar.R__: Renderings for the sidebar during the analysis phase
+     * __analysisPage.R__: Code for rendering the different analysis
+     * __statisticsTable.R__: Contains all the functions used for statistics table
+     * __statisticsBoxplot.R__: Contains all the functions used for basic boxplot
+     * __statisticsDiffAnal.R__: Contains all the functions used for differntial analysis
+     * __statisticsDiffVizu.R__: Contains all the functions used for vizualization for differential analysis
+     * __correlationTable.R__: Contains all the functions used for correlation and p-value table
+     * __correlationPlot.R__: Contains all the functions used for correlation plot
+     * __correlationSearch.R__: Contains all the functions used for advance correlation search
+     * __pca.R__:Contains all the functions used for PCA
+     * __hc.R__: Contains all the functions used for HC
+     * __mainControl.R__: Contains all the functions used to build the sidebar panel for data analysis
+     * __preProcessing.R__: Contains all the functions used for pre processing
+     * __searchAcross.R__: Code related to searching across projects, the right-hand panel on the main page
+ * __www__: Directory containing all front-end code, as required by Shiny 
+     * __all_css.css__: All CSS is found here. Primarily a theme taken from bootswatch.com. Custom css is found at the beginning
+     * __relative_x_scrolling.js__: A javascript function that keeps the persistent side panel from staying persistent with horizontal scrolling
+     * __switch.js__: A javascript function that controls the UI flow
+ * __misc__: Directory containing miscellaneous files for documentation aid
+     * __database_documentation.html__: Database documentation generated by SchemaSpy
+     * __example_study.xlsm__: An example of the exact format required
+     * __smile_parser.py__: The python script used to parse SMILE data
+     * __.schemaspy_output__: Hidden directory containing SchemaSpy output loaded by database_documentation.html
+ 
+DATABASE ARCHITECTURE
+---------------------
+
+The file database_documentation.html in the misc directory contains a summary on the current database structure. This report can answer most questions about the database. All table and column names are self explanatory. Listed below are a few tricky aspects and relationships not outlined in the report: 
+
+ * __igroup__ stands for intervention group, as group could not be used because it is a keyword
+ * __study to subject__, __study to igroup__, __study to timepoint__ are all in theory __many-to-many__ relationships. None of the intermediary tables are defined, as you always query through measurements. The add study script currently needs to watch out for these hidden many-to-many relationships
+ * __study to variable__ is in theory __one to many__. A single variable found in multiple studies of the same project may offer problems when merging the studies for analysis
+ 
+ The code that actually builds the database is found in complexDatabaseCommunication, in the function createDatabase.
+
+CONFIGURATION
+---------------------
+
+R, Shiny Server, PostgreSQL, and all packages listed in [requirements](#requirements) must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.
+
+STUDY FORMAT
+---------------------
+
+As of now, the format of studies that can be uploaded is extremeley specific. The file example_study.xlsm in the misc folder is an example of the __exact__ format a study must follow. Important qualifications include:
+
+ * __Everything__ must be spelled correctly, capitalization and white-space sensitive
+ * The study must be an xlsm file comprised of two sheets
+ * The first sheet must be the general information sheet
+	 * It must outline ALL of the visit timings found in the data. Visit must be a number
+	 * Every category that is not defined must be filled in with an NA
+	 * The section order (General information, remarks, visit timings) must be the same
+ * The second sheet must be the data sheet
+	 * The first section (Analysis remark to No sample availabe) must be in at the start and each defined for every feature (or NA if not applicable)
+	 * Every variable should have a its full name (or regular if none) outlined above it
+	 * No variables can have units with micro symbol
+	 * All Subject#s must be __integers__ (ie 302-2 does not work)
+
+In general, if you stick to the given format (which allows for an indiscriminate number of variables), the file should work. With the exception of the actual data cells, you need to have NAs in spots where the study did not define the specific value.	
+
+CONVERTING A STUDY
+---------------------
+
+In the misc folder of the repository there is a python script that was used to convert the SMILE data into SDTM format. The script is incomplete, however, because some functions are simply much easier to do manually. The manual steps before the script was run were:
+
+ * After every variable name, add the units surrounded by parentheses
+ * Rename whatever column stood for subject to Subject#
+ * Rename whatever column stood for group to Group
+ * Rename whatever column stood for timepoint to Timepoint (Visit)
+ * Order the files in their own directory to make sure the ones with a Group column were loaded first
+ * Remove any uneccessary graphs or unorganized data in the tables that would mess up the parser
+ * Ignore any data that involved no timepoints and multiple measurements of the same column for a single subject
+ 
+After the scripts were run, a couple more steps were performed:
+
+ * The units row at the bottom was transported to the top per the SDTM format
+ * All of the undefined values for variables like protocol, lower limit, etc were added in and given NA values when undefined
+ * A general information sheet was created, with NAs going in values we did not know
+ * The names of the variables were copied to the row above them, as per defined in the [study formatting](#study-format) section
+
+In general we just made sure it matched the SDTM format as outlined example_study.xlsm. The script I have included in the misc directory may be useful for converting future studies, but overall we found certain things were significantly easier to do manually than with python. For example, whenever the subject column had a name other than Subject#, it was much easier to convert it manually, as the parser cannot recognize different ways to define subject (SUBJ, subject, subj, etc) without being given terms to look for at the start. 
+
+TODO
+---------------------
+
+Improvements looking forward:
+
+ * The biggest challenge facing this project ahead is its ability to only upload very specific studies. Right now the parser is strict, both format and file-type wise. We need either a standard format, or a lenient and complex parser 
+ * The database can still be expanded. It could use trigger functions, views, and perhaps more tables (ie defining those [phantom many-to-manys](#database-architecture)) 
+ * The xlsm format appears to encode mu incorrectly, so you must currently change units like micrograms to ug
+ * The user interface could use a new section where a user could change a previously uploaded value. Right now to correct the database you need to know postgresql and have access
+ * The current UI pattern for hiding/showing elements based on sections is not sustainable if the app continues to grow. Perhaps modularizing into different Shiny apps is the best next step, because one Shiny app can only be one html page
+
+
+CREDITS
+---------------------
+
+Arithmos v0.1 was built by interns Gabriel Gardner and Alfrad Chew, overseen by Mei Lyn Ong of the Immunology team at the Singapore R&D center for Danone Nutricia. Contact info follows:
+
+ * __Gabriel Gardner__: Database Designer
+    * gabrielgardner@icloud.com
+    * Former employee
+ * __Alfrad Chew__: Statistician
+    * cswa_1992@hotmail.com 
+

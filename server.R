@@ -22,26 +22,26 @@ shinyServer(function(input, output, session) {
     observe(dbDisconnect(values$con))
   })
   
-  source("startPanel.R", local=TRUE)
-  source("searchAcross.R", local=TRUE)
-  source('preProcessing.R', local=TRUE)
+  source("server_modules/startPanel.R", local=TRUE)
+  source("server_modules/searchAcross.R", local=TRUE)
+  source('server_modules/preProcessing.R', local=TRUE)
   
-  source('mainControl.R', local=TRUE)
-  source('analysisSidebar.R', local=TRUE)
-  source('analysisPage.R', local=TRUE)
+  source('server_modules/mainControl.R', local=TRUE)
+  source('server_modules/analysisSidebar.R', local=TRUE)
+  source('server_modules/analysisPage.R', local=TRUE)
   
   #dictionary used in analysis
   listb <- list()
   
-  source('statisticsTable.R', local=TRUE)
-  source('statisticsBoxplot.R', local=TRUE)
-  source('statisticsDiffAnal.R', local=TRUE)
-  source('statisticsDiffVizu.R', local=TRUE)
-  source('correlationTable.R', local=TRUE)
-  source('correlationPlot.R', local=TRUE)
-  source('correlationSearch.R', local=TRUE)
-  source('pca.R', local=TRUE)
-  source('hc.R', local=TRUE)
+  source('server_modules/statisticsTable.R', local=TRUE)
+  source('server_modules/statisticsBoxplot.R', local=TRUE)
+  source('server_modules/statisticsDiffAnal.R', local=TRUE)
+  source('server_modules/statisticsDiffVizu.R', local=TRUE)
+  source('server_modules/correlationTable.R', local=TRUE)
+  source('server_modules/correlationPlot.R', local=TRUE)
+  source('server_modules/correlationSearch.R', local=TRUE)
+  source('server_modules/pca.R', local=TRUE)
+  source('server_modules/hc.R', local=TRUE)
   
 
 })

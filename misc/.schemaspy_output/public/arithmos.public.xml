@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<database name="arithmos" schema="public" type="PostgreSQL - 9.5.3">
+   <tables>
+      <table name="igroup" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('igroup_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="igroup_pk" foreignKey="subject_igroup_pk_fkey" implied="false" onDeleteCascade="false" table="subject"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="igroup" nullable="true" remarks="" size="2147483647" type="text"/>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="igroup_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="lab" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" digits="0" id="0" name="name" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="true" defaultValue="nextval('lab_pk_seq'::regclass)" digits="0" id="1" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="lab_pk" foreignKey="study_lab_pk_fkey" implied="false" onDeleteCascade="false" table="study"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="lab_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="measurement" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('measurement_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial"/>
+         <column autoUpdated="false" digits="0" id="1" name="value" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="2" name="timepoint_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="measurement_timepoint_pk_fkey" implied="false" onDeleteCascade="true" table="timepoint"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="3" name="variable_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="measurement_variable_pk_fkey" implied="false" onDeleteCascade="true" table="variable"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="4" name="subject_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="measurement_subject_pk_fkey" implied="false" onDeleteCascade="true" table="subject"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="5" name="study_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="measurement_study_pk_fkey" implied="false" onDeleteCascade="true" table="study"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="measurement_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+         <index name="measurement_index" unique="false">
+            <column ascending="true" name="timepoint_pk"/>
+            <column ascending="true" name="variable_pk"/>
+            <column ascending="true" name="subject_pk"/>
+            <column ascending="true" name="study_pk"/>
+         </index>
+      </table>
+      <table name="project" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" digits="0" id="0" name="project_code" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="true" defaultValue="nextval('project_pk_seq'::regclass)" digits="0" id="1" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="project_pk" foreignKey="study_project_pk_fkey" implied="false" onDeleteCascade="true" table="study"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="project_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="sample_type" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" digits="0" id="0" name="sample_type" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="true" defaultValue="nextval('sample_type_pk_seq'::regclass)" digits="0" id="1" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="sample_type_pk" foreignKey="study_sample_type_pk_fkey" implied="false" onDeleteCascade="false" table="study"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="sample_type_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="study" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" digits="0" id="0" name="study_name" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="1" name="extraction_method_protocol" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="2" name="population_spec" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="3" name="treatment_category_spec" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="4" name="sample_cell_condition" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="5" name="lotnumber" nullable="true" remarks="" size="10" type="int4"/>
+         <column autoUpdated="false" digits="0" id="6" name="lab_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="study_lab_pk_fkey" implied="false" onDeleteCascade="false" table="lab"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="7" name="project_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="study_project_pk_fkey" implied="false" onDeleteCascade="true" table="project"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="8" name="sample_type_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="study_sample_type_pk_fkey" implied="false" onDeleteCascade="false" table="sample_type"/>
+         </column>
+         <column autoUpdated="true" defaultValue="nextval('study_pk_seq'::regclass)" digits="0" id="9" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="study_pk" foreignKey="measurement_study_pk_fkey" implied="false" onDeleteCascade="true" table="measurement"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="study_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+         <index name="study_index" unique="false">
+            <column ascending="true" name="project_pk"/>
+         </index>
+      </table>
+      <table name="subject" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('subject_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="subject_pk" foreignKey="measurement_subject_pk_fkey" implied="false" onDeleteCascade="true" table="measurement"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="subject_num" nullable="true" remarks="" size="10" type="int4"/>
+         <column autoUpdated="false" digits="0" id="2" name="igroup_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="subject_igroup_pk_fkey" implied="false" onDeleteCascade="false" table="igroup"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="subject_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+         <index name="subject_index" unique="false">
+            <column ascending="true" name="igroup_pk"/>
+         </index>
+      </table>
+      <table name="timepoint" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('timepoint_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="timepoint_pk" foreignKey="measurement_timepoint_pk_fkey" implied="false" onDeleteCascade="true" table="measurement"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="visit" nullable="true" remarks="" size="10" type="int4"/>
+         <column autoUpdated="false" digits="0" id="2" name="days" nullable="true" remarks="" size="10" type="int4"/>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="timepoint_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="variable" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('variable_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="variable_pk" foreignKey="measurement_variable_pk_fkey" implied="false" onDeleteCascade="true" table="measurement"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="protocol_number" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="2" name="upper_limit" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="3" name="lower_limit" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="4" name="no_sample_available" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="5" name="variable_unit_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="variable_variable_unit_pk_fkey" implied="false" onDeleteCascade="false" table="variable_unit"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="6" name="variable_name_pk" nullable="true" remarks="" size="10" type="int4">
+            <parent column="pk" foreignKey="variable_variable_name_pk_fkey" implied="false" onDeleteCascade="false" table="variable_name"/>
+         </column>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="variable_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="variable_name" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('variable_name_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="variable_name_pk" foreignKey="variable_variable_name_pk_fkey" implied="false" onDeleteCascade="false" table="variable"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="name_abbrev" nullable="true" remarks="" size="2147483647" type="text"/>
+         <column autoUpdated="false" digits="0" id="2" name="name_full" nullable="true" remarks="" size="2147483647" type="text"/>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="variable_name_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+      <table name="variable_unit" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('variable_unit_pk_seq'::regclass)" digits="0" id="0" name="pk" nullable="false" remarks="" size="10" type="serial">
+            <child column="variable_unit_pk" foreignKey="variable_variable_unit_pk_fkey" implied="false" onDeleteCascade="false" table="variable"/>
+         </column>
+         <column autoUpdated="false" digits="0" id="1" name="unit" nullable="true" remarks="" size="2147483647" type="text"/>
+         <primaryKey column="pk" sequenceNumberInPK="1"/>
+         <index name="variable_unit_pkey" unique="true">
+            <column ascending="true" name="pk"/>
+         </index>
+      </table>
+   </tables>
+</database>

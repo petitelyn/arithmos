@@ -325,7 +325,7 @@ addStudy <- function(con, general_info_root, study_data_root, study_name, total_
     }
     #get a cache of the primary keys of the current subjects, groups, and timepoints
     #this was added to speed up function by avoiding querying every time a new subject/group/timepoint is found
-    
+    #these can probably be done as a single query but it was giving me issues
     get_subjects <- sprintf("SELECT subject.pk as subject_pk, subject.subject_num FROM project JOIN study ON study.project_pk = project.pk
                                       JOIN measurement ON measurement.study_pk = study.pk JOIN subject ON subject.pk = measurement.subject_pk
                                       WHERE project.pk=%i GROUP BY subject.pk, subject.subject_num", project_pk)
