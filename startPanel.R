@@ -120,6 +120,17 @@ loadData <- observeEvent(input$load, {
     incProgress(1/2)
     #load all of the measurements of all of the given studies in a dataframe in wide format
     wide_format <- getStudyDataWideFormat(values$con, pk_list)
+    
+    #removes columns that contain only missing values
+    num <- NULL
+    for(i in 1:length(colnames(wide_format))){
+      if(all_missing(wide_format[,i])){
+        num <- c(num,i)
+      }
+    }
+    num <- -num
+    wide_format <- wide_format[,num]
+    
     #load copy of data for processing
     values$data <<- wide_format
     #full data copy will not be processed so user can process multiple times
