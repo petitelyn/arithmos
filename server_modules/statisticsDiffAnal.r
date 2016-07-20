@@ -243,6 +243,7 @@ output$downloadData1.3.1 <- downloadHandler(
     for (i in input$choose_variable){
       nam1 <- paste(nam1,"\n",i,sep = "")
     }
+   
     d[4,3] <- nam1
     
     d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
