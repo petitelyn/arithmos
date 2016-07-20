@@ -3,14 +3,14 @@ process_data <- observeEvent(input$preProcess, {
     
     dataset <- values$fulldata
     values$name <<- NULL
+    
+    #Remove Remarks, Birth date baby & subject initials
     if("Remarks" %in% substr(colnames(dataset),1,7)){
       dataset <- dataset[,-which( substr(colnames(dataset),1,7) == "Remarks")]
     }
-    
     if("Birth date baby" %in% substr(colnames(dataset),1,15)){
       dataset <- dataset[,-which( substr(colnames(dataset),1,15) == "Birth date baby")]
     }
-    
     if("Subject Initials" %in% substr(colnames(dataset),1,16)){
       dataset <- dataset[,-which( substr(colnames(dataset),1,16) == "Subject Initials")]
     }
@@ -19,6 +19,7 @@ process_data <- observeEvent(input$preProcess, {
     C <- 1
     incProgress(0.25)      
     while(length(R) != 0 & length(C) != 0){
+      #Remove columns that contain too much missing values
       A <- apply(dataset,2,count_missing)
       A <- A / length(dataset[,3])
       C <- which(is_greater(A, input$col_cutoff / 100) == TRUE)
@@ -28,6 +29,7 @@ process_data <- observeEvent(input$preProcess, {
       
       dataset_var <- dataset[,-c(1:2)]
       
+      #Remove rows that contain too much missing values
       B <- apply(dataset_var,1,count_missing)
       B <- B/ length(dataset_var[1,])
       R <- which(is_greater(B, input$row_cutoff / 100) == TRUE)
@@ -39,6 +41,8 @@ process_data <- observeEvent(input$preProcess, {
     
     incProgress(0.25)
     num <- NULL
+    
+    #Remove the timepoint (-1) for demographics variable
     for (i in 1:length(colnames(dataset))){
       dataset[,i][dataset[,i] == "NA"] <- NA
       
@@ -107,17 +111,19 @@ makePreText <- function(){
   }
   
   n <- max(length(sample_removed),length(var_removed),length(constVar_removed))
+  
+  #Introduce dummy empty numbers since R does not allow combining columns of different length
   sample_removed <- c(sample_removed,rep("",n-length(sample_removed)))
   var_removed <- c(var_removed,rep("",n-length(var_removed)))
   constVar_removed <- c(constVar_removed,rep("",n-length(constVar_removed)))
   df <- data.frame(n1 = sample_removed, n2 = var_removed, n3 = constVar_removed, stringsAsFactors = F)
   colnames(df) <- c("ID of samples removed", "Variables removed", "Constant variables removed")
   
-  cat(sprintf(info1), "\n")
-  cat(sprintf(info2), "\n")
-  cat(sprintf(info3), "\n")
-  cat(sprintf(info4), "\n")
-  cat(sprintf(info5), "\n")
+  cat(info1, "\n")
+  cat(info2, "\n")
+  cat(info3, "\n")
+  cat(info4, "\n")
+  cat(info5, "\n")
   df
 }
 

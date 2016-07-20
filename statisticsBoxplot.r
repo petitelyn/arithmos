@@ -13,8 +13,14 @@ makePlot1.2 <- function(text_size){
   #Convert the dataset into long format to plot the boxplot
   df <- melt(variable)
   
+  #Tells ggplot to plot variable on the X axis, the value on the Y axis, and
+  #to give a different colour for each variable
   p <- ggplot(df, aes(variable, value, fill = variable)) + 
+    
+    #Gives a fixed width for each boxplot.
     geom_boxplot(width = (0.05 * length(colnames(variable)))) +
+    
+    #Adjustments of theme for the boxplot
     theme(text = element_text(size=text_size), 
           axis.text.x = element_text(angle=45, hjust=1,margin=margin(10,0,0,0)),
           axis.text.y = element_text(margin=margin(0,10,0,0)),
@@ -30,13 +36,15 @@ makePlot1.2 <- function(text_size){
 #Function to produce help text for the boxplot
 helpText1.2 <- function(){
   info1 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of continuous variables.")
-  info2 <- paste("")
-  info3 <- paste("Recommended number of variables selected: <= 20.")
-  info4 <- paste("If more than 20 variables are selected, only the first 20 will be plotted.")
+  info2 <- paste("The dots, if any, represent the outliers.")
+  info3 <- paste("")
+  info4 <- paste("Recommended number of variables selected: <= 20.")
+  info5 <- paste("If more than 20 variables are selected, only the first 20 will be plotted.")
   cat(info1, "\n")
   cat(info2, "\n")
   cat(info3, "\n")
   cat(info4, "\n")
+  cat(info5, "\n")
 }
 
 listb[["1-2"]] <- tagList(h3("Boxplot"),

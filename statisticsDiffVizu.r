@@ -43,12 +43,17 @@ makePlot1.3.2 <- function(){
         df[,2] <- as.factor(df[,2])
         colnames(df)[c(1,2,3,4)] <- c("ID","Group","VarX","VarY")
       }
+      
+      #Tells ggplot to plot VarX on the X axis, VarY on the Y axis, and
+      #to give a different colour for each dot (of size 2) for different groups
       p <- ggplot(df, aes(x=VarX, y=VarY)) + geom_point(size=2, aes(colour=Group)) +
         scale_colour_hue(l=50) + # Use a slightly darker palette than normal
         geom_smooth(method=lm,   # Add linear regression lines
                     se=FALSE,    # Don't add shaded confidence region
-                    aes(colour = Group),
-                    fullrange=TRUE) +
+                    aes(colour = Group), # Give a different colour for each group
+                    fullrange=TRUE) +  #Extrapolate the line to fill the entire graph
+        
+        #Adjustments of theme for the scatterplot
         theme(text = element_text(size=15),
               axis.line.x = element_line(colour = "black", size = 1),
               axis.line.y = element_line(colour = "black", size = 1),
@@ -65,11 +70,15 @@ makePlot1.3.2 <- function(){
       df <- cbind(ID, X_var, Y_var)
       df <- na.omit(df)
       colnames(df)[c(1,2,3)] <- c("ID","VarX","VarY")
+      
+      #Tells ggplot to plot VarX on the X axis, VarY on the Y axis
       p <- ggplot(df, aes(x=VarX, y=VarY)) + geom_point(size=2) + 
         scale_colour_hue(l=50) + # Use a slightly darker palette than normal
         geom_smooth(method=lm,   # Add linear regression lines
                     se=FALSE,    # Don't add shaded confidence region
-                    fullrange=TRUE) +
+                    fullrange=TRUE) + #Extrapolate the line to fill the entire graph
+        
+        #Adjustments of theme for the scatterplot
         theme(text = element_text(size=15),
               axis.line.x = element_line(colour = "black", size = 1),
               axis.line.y = element_line(colour = "black", size = 1),
@@ -92,7 +101,12 @@ makePlot1.3.2 <- function(){
     colnames(df) <- c("VarX","VarY")
     df <- na.omit(df)
     
+    #Tells ggplot to plot VarX (must be a factor) on the X axis, VarY on the Y axis, and
+    #to give a fixed width for each boxplot
+    #coord_flip() transpose the graph
     p <- ggplot(df, aes(factor(VarY), VarX, fill = VarY )) + coord_flip() + geom_boxplot(width = (0.2 * length(unique(df$VarY)))) +
+      
+      #Adjustments of theme for the boxplot
       theme(text = element_text(size=15), 
             axis.text.x = element_text(margin=margin(10,0,0,0)),
             axis.text.y = element_text(margin=margin(0,10,0,0)),
@@ -114,7 +128,11 @@ makePlot1.3.2 <- function(){
     colnames(df) <- c("VarX","VarY")
     df <- na.omit(df)
     
+    #Tells ggplot to plot VarX (must be a factor) on the X axis, VarY on the Y axis, and
+    #to give a fixed width for each boxplot
     p <- ggplot(df, aes(factor(VarY), VarX, fill = VarY )) + geom_boxplot(width = (0.2 * length(unique(df$VarY)))) +
+      
+      #Adjustments of theme for the boxplot
       theme(text = element_text(size=15), 
             axis.text.x = element_text(hjust=1, margin=margin(10,0,0,0)),
             axis.text.y = element_text(margin=margin(0,10,0,0)),
@@ -134,10 +152,13 @@ makePlot1.3.2 <- function(){
     df <- na.omit(cbind(group1,group2))
     
     df <- data.frame(df)
+    #Give the frequency table for each combination of categorical variable
     freq=table(col(df), as.matrix(df))
-    
     counts <- ddply(df, .(df[,1], df[,2]), nrow)
+    
     colnames(counts) <- c("VarX","VarY","value")
+    
+    #Plotting the barplot
     ggplot(counts, aes(VarX, value)) +   
       geom_bar(aes(fill = VarY), position = "dodge", stat="identity", colour = "black") + xlab(input$select1.3.2) + ylab("Freq") +
       ggtitle(input$main1.3.2) + scale_fill_discrete(name = input$var_interest) + theme(text = element_text(size=15))
@@ -153,30 +174,34 @@ helpText1.3.2 <- function(){
   if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
     info1 <- paste("The scatterplot illustrates the relationship between 2 continuous variables.")
     info2 <- paste("A line of best fit is drawn in the plot.")
-    cat(sprintf(info1), "\n")
-    cat(sprintf(info2), "\n")
+    cat(info1, "\n")
+    cat(info2, "\n")
   }
   
   #Boxplot, Y(Continuous) vs X(Categorical)
   else if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
     info1 <- paste("The boxplot illustrates the difference between groups of a continuous variables.")
     info2 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of continuous variables.")
-    cat(sprintf(info1), "\n")
-    cat(sprintf(info2), "\n")
+    info3 <- paste("The dots, if any, represent the outliers.")
+    cat(info1, "\n")
+    cat(info2, "\n")
+    cat(info3, "\n")
   }
   
   #Boxplot, Y(Categorical) vs X(Continuous)
   else if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(group)){
     info1 <- paste("The boxplot illustrates the difference between groups of a continuous variables.")
     info2 <- paste("The boxplot displays the max,min,median, 25th and 75th percentile of continuous variables.")
-    cat(sprintf(info1), "\n")
-    cat(sprintf(info2), "\n")
+    info3 <- paste("The dots, if any, represent the outliers.")
+    cat(info1, "\n")
+    cat(info2, "\n")
+    cat(info3, "\n")
   }
   
   #Barplot, Y(Categorical) vs X(Categorical)
   else{
     info1 <- paste("The barplot shows the number of samples in a categorical variables for each group.")
-    cat(sprintf(info1), "\n")
+    cat(info1, "\n")
   }
 }
 

@@ -58,14 +58,9 @@ makeTable1.3.1 <- reactive({
         n <- c(n, length(na.omit(cbind(varInterest_char,v_char))[,1]))
       }
     }
-    # if(max(p_value) < 0.7){
-    #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-    # }
-    # else if(max(p_value) >= 0.7){
-    #   q_value <- qvalue(p_value)$qvalues
-    # }
+    q_value <- rep(NA,length(var_name))
     
-    df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, Method = method, stringsAsFactors = F)
+    df <- data.frame(Variable = var_name, Type = type, n = n, rho = rho, Rsquared = r_squared, PValue = p_value, QValue = q_value, Method = method, stringsAsFactors = F)
   }
   
   #Y(Categorical) vs X(Continuous)
@@ -107,14 +102,9 @@ makeTable1.3.1 <- reactive({
         n <- c(n, length(na.omit(cbind(varInterest,v_char))[,1]))
       }
     }
-    # if(max(p_value) < 0.7){
-    #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-    # }
-    # else if(max(p_value) >= 0.7){
-    #   q_value <- qvalue(p_value)$qvalues
-    # }
+    q_value <- rep(NA,length(var_name))
     
-    df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value, Method = method, stringsAsFactors = F)
+    df <- data.frame(Variable = var_name, Type = type, n = n, PValue = p_value, QValue = q_value, Method = method, stringsAsFactors = F)
   }
   
   rownames(df) <- var_name
@@ -122,6 +112,15 @@ makeTable1.3.1 <- reactive({
   #Order the table by the p values
   df <- df[order(df$PValue),]
   
+  #Insert QValue
+  p <- df$PValue[!is.na(df$PValue)]
+  if(max(p) < 0.7){
+    q_value <- qvalue(p,lambda=seq(0,0.90,0.05))$qvalues
+  }
+  else if(max(p) >= 0.7){
+    q_value <- qvalue(p)$qvalues
+  }
+  df$QValue <- c(q_value,rep(NA,count_missing(df$PValue)))
   df
 })
 
@@ -132,10 +131,10 @@ makeResults1.3.1 <- reactive({
   dataset <- dataset[order(dataset$PValue),]
   info1 <- paste("Most statistically significant variable: ",dataset[1,1])
   info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05,na.rm=T))
-  #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+  info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05,na.rm=T))
   cat(sprintf(info1), "\n")
   cat(sprintf(info2), "\n")
-  #cat(sprintf(info3), "\n")
+  cat(sprintf(info3), "\n")
 })
 
 #Function to produce the help text for differential analysis
@@ -152,7 +151,7 @@ helpText1.3.1 <- reactive({
     info6 <- paste("rho (only continuous variables): Spearman's rank correlation value")
     info7 <- paste("RSquared (only continuous variables): rho^2")
     info8 <- paste("PValue: Significance level")
-    #info9 <- paste("QValue: Adjusted P-Value")
+    info9 <- paste("QValue: Adjusted P-Value")
     info10 <- paste("")   
     info11 <- paste("Method for continuous variables: Spearman's rank correlation test")
     info12 <- paste("Method for categorical variables: Kruskal-Wallis test")
@@ -165,7 +164,7 @@ helpText1.3.1 <- reactive({
     cat(info6, "\n")
     cat(info7, "\n")
     cat(info8, "\n")
-    #cat(info9, "\n")
+    cat(info9, "\n")
     cat(info10, "\n")
     cat(info11, "\n")
     cat(info12, "\n")
@@ -178,7 +177,7 @@ helpText1.3.1 <- reactive({
     info4 <- paste("Type: Variable type")
     info5 <- paste("n: Number of paired samples")
     info6 <- paste("PValue: Significance level")
-    #info7 <- paste("QValue: Adjusted P-Value")
+    info7 <- paste("QValue: Adjusted P-Value")
     info8 <- paste("")   
     info9 <- paste("Method for continuous variable: Multinomial Logistic Regression & Likelihood Ratio Test")
     info10 <- paste("Method for categorical variable: Fisher's exact Test")
@@ -189,7 +188,7 @@ helpText1.3.1 <- reactive({
     cat(info4, "\n")
     cat(info5, "\n")
     cat(info6, "\n")
-    #cat(info7, "\n")
+    cat(info7, "\n")
     cat(info8, "\n")
     cat(info9, "\n")
     cat(info10, "\n")

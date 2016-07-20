@@ -81,15 +81,19 @@ makeTable2.3 <- reactive({
   df <- df[-which(df[,1] == input$choose_variable_2.3.1),]
   df <- df[is.na(df$PValue) == F,]
   p_value <- df$PValue
-  # if(max(p_value) < 0.7){
-  #   q_value <- qvalue(p_value,lambda=seq(0,0.90,0.05))$qvalues
-  # }
-  # else if(max(p_value) >= 0.7){
-  #   q_value <- qvalue(p_value)$qvalues
-  # }
-  # df$QValue <- q_value
   df <- df[df$PValue <  input$choose_alpha_level2.3,]
   df <- df[order(df$PValue),]
+  df
+
+  #Insert QValue
+  #p <- as.numeric(df$PValue[!is.na(df$PValue)])
+  # if(max(p) < 0.7){
+  #   q_value <- qvalue(p,lambda=seq(0,0.85,0.05))$qvalues
+  # }
+  # else if(max(p) >= 0.7){
+  #   q_value <- qvalue(p)$qvalues
+  # }
+  # df$QValue <- c(q_value,rep(NA,count_missing(df$PValue)))
 })
 
 #Function to produce the help text for the scatterplot

@@ -122,7 +122,7 @@ makePlot4.2 <- function(){
   
   heatmap.2(t(variable), Rowv = input$displayRow4, scale ='none', symkey = F, keysize = 1.0, col = cols,
             key = TRUE, key.xlab = "Row Z-Score", density.info="none", trace = "none", main = input$main4, 
-            ColSideColors = group_col, labCol = NULL, labRow = a, margins = c(4,14), cexRow = 1.5, cexCol = 1.5,
+            ColSideColors = group_col, labCol = NA, labRow = a, margins = c(4,14), cexRow = 1.5, cexCol = 1.5,
             distfun = function(x) dist(x,method = "euclidean"),
             hclustfun = function(x) hclust(x,method = "ward"))
   
