@@ -71,12 +71,18 @@ makeTable1.3.1 <- reactive({
         v <- dataset[,colnames(dataset) %in% i, drop =F]
         
         #Multinomial logistic regression test, followed by likelihood ratio test
-        test <- multinom(varInterest[,1] ~ v[,1])
-        a <- Anova(test)
-        
+        a <- cbind(varInterest[,1],v[,1])
+        a <- na.omit(a)
+        if(length(unique(a[,1])) == 1){
+          p_value <- c(p_value, NA)
+        }
+        if(length(unique(a[,1])) != 1){
+          test <- multinom(varInterest[,1] ~ v[,1])
+          a <- Anova(test)
+          p_value <- c(p_value, a$`Pr(>Chisq)`)
+        }
         var_name <- c(var_name,i)
         type <- c(type,"Continuous")
-        p_value <- c(p_value, a$`Pr(>Chisq)`)
         method <- c(method,"Multinomial Logistic Regression & Likelihood Ratio Test")
         varInterest_char <- as.character(varInterest[,1])
         varInterest_char[varInterest_char == "NA"] <- NA

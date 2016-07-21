@@ -2,11 +2,13 @@
 makeText2.1 <- reactive({
   n <- length(colnames(selec_var()[[1]]))
   if(input$select2.1 == 1){
+    #Gives a correlation table of max 15 variables
     if(n > 15){
       variable <- selec_var()[[1]][,1:15]
       info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
       info
     }
+    #Need at least 2 variables to give a correlation table
     else if(n > 2){
       variable <- selec_var()[[1]]
       info <- cor(variable, use = "pairwise.complete.obs", method = input$type2)
@@ -17,11 +19,13 @@ makeText2.1 <- reactive({
     }
   }
   else{
+    #Gives a correlation significance table of max 15 variables
     if(n > 15){
       variable <- selec_var()[[1]][,1:15]
       p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)
       p.mat
     }
+    #Need at least 2 variables to give a correlation significance table
     else if(n > 2){
       variable <- selec_var()[[1]]
       p.mat <- cor.mtest(variable, u = "pairwise.complete.obs", met = input$type2)

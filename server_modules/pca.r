@@ -132,18 +132,14 @@ ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
 #Function to produce the results table for PCA
 makeText3.1 <- reactive({
   x <- makeText3.2()[1,1]
-  x <- round((x*100),1)
+  x <- round((x*100),1) #Converts decimals to percentage
   y <- makeText3.2()[1,2]
-  y <- round((y*100),1)
+  y <- round((y*100),1) #Converts decimals to percentage
   info1 <- paste("The first principal component explains", paste(x,"%", sep = ""), "of the total variation of the variables.")
   info2 <- paste("The second principal component explains", paste(y,"%", sep = ""),  "of the total variation of the variables.")
   
-  variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
   group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
-  
-  rownames(variable) <- values$data[,1]
-  variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   
   count <- 2
   info <- cbind(info1, info2)
@@ -163,9 +159,11 @@ makeText3.2 <- function(){
   variable <- selec_var()[[1]]
   
   rownames(variable) <- values$data[,1]
-  variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  if(length(colnames(variable)) >= 3){
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  }
   
-  var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
+  var.pca <- prcomp(na.omit(variable), center = TRUE, scale. = TRUE) 
   
   info <- summary(var.pca)
   eigen <- info[[1]]^2
@@ -200,7 +198,10 @@ makePlot3 <- function(text_size){
   group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
   
   rownames(variable) <- values$data[,1]
+  
+  #Imputes missing values for PCA
   variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
   
   g <- ggbiplot(var.pca, varname.size = 3, obs.scale = 1, var.scale = 1,

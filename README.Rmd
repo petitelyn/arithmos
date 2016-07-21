@@ -22,19 +22,19 @@ REQUIREMENTS
 
 Arithmos is built using the Shiny, a web application framework for R developed by RStudio. Along with the obvious requirements of R and Shiny server, the following packages are required to run the application: 
  
- * __car__: Provides the function "ANOVA" for multivariate logistic regression models
+ * __car__: Provides the function "Anova" for multivariate logistic regression models
  * __ggplot2__: To plot boxplot, scatterplot, barplot, correlation plot and PCA biplot
  * __gplots__: Provides the function "heatmap.2'
  * __heatmaply__: Provides interactive heatmap
  * __laeken__: Provides the function "weightedMean" for "kNN" function
- * __missMDA__: Provides the function "imputePCA" to impute missing values of PCA
+ * __missMDA__: Provides the function "imputePCA" to impute missing values for PCA
  * __nnet__: Provides the function "multinom" for multivariate logistic regression models
- * __plotly__: Enables interactive plots on shiny
  * __plotly__: Provides interactive plot
  * __plyr__: Provides the function "ddply" for the barplot and PCA biplot
  * __pracma__: For the strcmp function
  * __psych__: Gives the "describe" function which displays basic statistics of a variable such as mean and median
  * __qvalue__: Computes Q value
+ * __rJava__: To install "XLConnect" and "XLConnectJars" package
  * __RColorBrewer__: Provides more options for type of colours used for heatmaps
  * __reshape2__: Converts variable to long/wide format
  * __RPostgreSQL__: For communication with the database
@@ -96,23 +96,24 @@ The file database_documentation.html in the misc directory contains a summary on
 CONFIGURATION
 ---------------------
 
-R, Shiny Server, PostgreSQL, and all packages listed in [requirements](#requirements) must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.
+R 3.0, Shiny Server, PostgreSQL, and all packages listed in [requirements](#requirements) must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.
 
 STUDY FORMAT
 ---------------------
 
-As of now, the format of studies that can be uploaded is extremeley specific. The file example_study.xlsm in the misc folder is an example of the __exact__ format a study must follow. Important qualifications include:
+As of now, the format of studies that can be uploaded is extremely specific. The file example_study.xlsm in the misc folder is an example of the __exact__ format a study must follow. Important qualifications include:
 
  * __Everything__ must be spelled correctly, capitalization and white-space sensitive
- * The study must be an xlsm file comprised of two sheets
+ * __Subject#, Group, Timepoint (Visit)__ must be included in every file
+ * The study must be an __xlsm__ file comprised of two sheets
  * The first sheet must be the general information sheet
 	 * It must outline ALL of the visit timings found in the data. Visit must be a number
 	 * Every category that is not defined must be filled in with an NA
 	 * The section order (General information, remarks, visit timings) must be the same
  * The second sheet must be the data sheet
-	 * The first section (Analysis remark to No sample availabe) must be in at the start and each defined for every feature (or NA if not applicable)
+	 * The first section (__Analysis remark__ to __No sample available__) must be in at the start and each defined for every feature (or NA if not applicable)
 	 * Every variable should have a its full name (or regular if none) outlined above it
-	 * No variables can have units with micro symbol
+	 * No variables can have units with micro symbol (replace micro with u)
 	 * All Subject#s must be __integers__ (ie 302-2 does not work)
 
 In general, if you stick to the given format (which allows for an indiscriminate number of variables), the file should work. With the exception of the actual data cells, you need to have NAs in spots where the study did not define the specific value.	
@@ -129,8 +130,8 @@ In the misc folder of the repository there is a python script that was used to c
  * Order the files in their own directory to make sure the ones with a Group column were loaded first
  * Remove any uneccessary graphs or unorganized data in the tables that would mess up the parser
  * Ignore any data that involved no timepoints and multiple measurements of the same column for a single subject
- 
-After the scripts were run, a couple more steps were performed:
+
+The script places the visit number -1 for static data. After the scripts were run, a couple more steps were performed:
 
  * The units row at the bottom was transported to the top per the SDTM format
  * All of the undefined values for variables like protocol, lower limit, etc were added in and given NA values when undefined

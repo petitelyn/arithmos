@@ -142,19 +142,19 @@ $(document).ready(function () {
 <h2>REQUIREMENTS</h2>
 <p>Arithmos is built using the Shiny, a web application framework for R developed by RStudio. Along with the obvious requirements of R and Shiny server, the following packages are required to run the application:</p>
 <ul>
-<li><strong>car</strong>: Provides the function “ANOVA” for multivariate logistic regression models</li>
+<li><strong>car</strong>: Provides the function “Anova” for multivariate logistic regression models</li>
 <li><strong>ggplot2</strong>: To plot boxplot, scatterplot, barplot, correlation plot and PCA biplot</li>
 <li><strong>gplots</strong>: Provides the function “heatmap.2’</li>
 <li><strong>heatmaply</strong>: Provides interactive heatmap</li>
 <li><strong>laeken</strong>: Provides the function “weightedMean” for “kNN” function</li>
-<li><strong>missMDA</strong>: Provides the function “imputePCA” to impute missing values of PCA</li>
+<li><strong>missMDA</strong>: Provides the function “imputePCA” to impute missing values for PCA</li>
 <li><strong>nnet</strong>: Provides the function “multinom” for multivariate logistic regression models</li>
-<li><strong>plotly</strong>: Enables interactive plots on shiny</li>
 <li><strong>plotly</strong>: Provides interactive plot</li>
 <li><strong>plyr</strong>: Provides the function “ddply” for the barplot and PCA biplot</li>
 <li><strong>pracma</strong>: For the strcmp function</li>
 <li><strong>psych</strong>: Gives the “describe” function which displays basic statistics of a variable such as mean and median</li>
 <li><strong>qvalue</strong>: Computes Q value</li>
+<li><strong>rJava</strong>: To install “XLConnect” and “XLConnectJars” package</li>
 <li><strong>RColorBrewer</strong>: Provides more options for type of colours used for heatmaps</li>
 <li><strong>reshape2</strong>: Converts variable to long/wide format</li>
 <li><strong>RPostgreSQL</strong>: For communication with the database</li>
@@ -221,14 +221,15 @@ $(document).ready(function () {
 </div>
 <div id="configuration" class="section level2">
 <h2>CONFIGURATION</h2>
-<p>R, Shiny Server, PostgreSQL, and all packages listed in <a href="#requirements">requirements</a> must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.</p>
+<p>R 3.0, Shiny Server, PostgreSQL, and all packages listed in <a href="#requirements">requirements</a> must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.</p>
 </div>
 <div id="study-format" class="section level2">
 <h2>STUDY FORMAT</h2>
-<p>As of now, the format of studies that can be uploaded is extremeley specific. The file example_study.xlsm in the misc folder is an example of the <strong>exact</strong> format a study must follow. Important qualifications include:</p>
+<p>As of now, the format of studies that can be uploaded is extremely specific. The file example_study.xlsm in the misc folder is an example of the <strong>exact</strong> format a study must follow. Important qualifications include:</p>
 <ul>
 <li><strong>Everything</strong> must be spelled correctly, capitalization and white-space sensitive</li>
-<li>The study must be an xlsm file comprised of two sheets</li>
+<li><strong>Subject#, Group, Timepoint (Visit)</strong> must be included in every file</li>
+<li>The study must be an <strong>xlsm</strong> file comprised of two sheets</li>
 <li>The first sheet must be the general information sheet
 <ul>
 <li>It must outline ALL of the visit timings found in the data. Visit must be a number</li>
@@ -237,9 +238,9 @@ $(document).ready(function () {
 </ul></li>
 <li>The second sheet must be the data sheet
 <ul>
-<li>The first section (Analysis remark to No sample availabe) must be in at the start and each defined for every feature (or NA if not applicable)</li>
+<li>The first section (<strong>Analysis remark</strong> to <strong>No sample available</strong>) must be in at the start and each defined for every feature (or NA if not applicable)</li>
 <li>Every variable should have a its full name (or regular if none) outlined above it</li>
-<li>No variables can have units with micro symbol</li>
+<li>No variables can have units with micro symbol (replace micro with u)</li>
 <li>All Subject#s must be <strong>integers</strong> (ie 302-2 does not work)</li>
 </ul></li>
 </ul>
@@ -257,7 +258,7 @@ $(document).ready(function () {
 <li>Remove any uneccessary graphs or unorganized data in the tables that would mess up the parser</li>
 <li>Ignore any data that involved no timepoints and multiple measurements of the same column for a single subject</li>
 </ul>
-<p>After the scripts were run, a couple more steps were performed:</p>
+<p>The script places the visit number -1 for static data. After the scripts were run, a couple more steps were performed:</p>
 <ul>
 <li>The units row at the bottom was transported to the top per the SDTM format</li>
 <li>All of the undefined values for variables like protocol, lower limit, etc were added in and given NA values when undefined</li>
@@ -275,6 +276,7 @@ $(document).ready(function () {
 <li>The xlsm format appears to encode mu incorrectly, so you must currently change units like micrograms to ug</li>
 <li>The user interface could use a new section where a user could change a previously uploaded value. Right now to correct the database you need to know postgresql and have access</li>
 <li>The current UI pattern for hiding/showing elements based on sections is not sustainable if the app continues to grow. Perhaps modularizing into different Shiny apps is the best next step, because one Shiny app can only be one html page</li>
+<li>Database user security</li>
 </ul>
 </div>
 <div id="credits" class="section level2">

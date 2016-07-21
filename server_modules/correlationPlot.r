@@ -8,6 +8,7 @@ abbreviateSTR_P <- function(value, prefix, alpha){
       next
     }
     
+    #Round the number to 3 decimal places
     item <- round(item, 3)
     
     if (item < 0.01) {
@@ -53,6 +54,8 @@ makePlot2.2 <- function(text_size){
     }
     
     variable <- variable[,colnames(variable) %in% input$choose_variable2.2,drop = FALSE]
+    
+    #Plot up to a maximum of 15 variables
     if(length(input$choose_variable2.2) > 15){
       variable <- variable[,1:15]
     }
@@ -79,9 +82,11 @@ makePlot2.2 <- function(text_size){
     cordata$labelr = abbreviateSTR_R(melt(cordata)$value, prefix = r)
     cordata$labelP = abbreviateSTR_P(melt(pdata)$value, prefix = 'p', 0.05)
     
+    #Puts R label on top and P label below 
     cordata$label = paste(cordata$labelr, "\n", 
                           cordata$labelP, sep = "")
     
+    #Removes label if user wants to display significant pairwise variables only
     if(input$displaysig2.2 == T){
       for(i in 1:length(rownames(cordata))){
         if(!is.na(pdata$value[i]) & pdata$value[i] > input$alpha2.2){
@@ -90,10 +95,13 @@ makePlot2.2 <- function(text_size){
       }
     }
     
+    #Creates a lower triangular matrix
     cordata.lower = subset(cordata[lower.tri(info, diag = T),])
     cordata.lower$Var1 <- with(cordata.lower, factor(cordata.lower$Var1, levels = rev(levels(cordata.lower$Var1))))
     
     txtsize <- par('din')[2] / 2
+    
+    
     p <- ggplot(cordata.lower, aes(x=Var1, y=Var2)) + geom_tile(aes(fill = value), colour = "black") + theme_classic() +
       theme(legend.key.height = unit(2.5, "line"),
             axis.text.x = element_text(size = text_size, angle=45, hjust=TRUE, margin=margin(10,0,0,0)),
@@ -101,7 +109,6 @@ makePlot2.2 <- function(text_size){
             plot.title = element_text(size = text_size, margin=margin(0,0,10,0))) +
       xlab("") + ylab("") + 
       geom_text(label = cordata.lower$label, size = (10/(length(colnames(variable))**0.5))) +
-      # scale_fill_gradient2(name=r,limit = c(-1,1),low = "#BB4444", high = "Yellow") +
       scale_fill_gradientn(name=r, colours = rev(rainbow(20*10, start = 0/6, end = 4/6))) +
       ggtitle(input$main2.2) +
       annotate("text", x = length(p.mat[,1]), y = length(p.mat[,1]) , label = paste("** p<0.01", " * p<0.05", sep = "\n"), size = 3)

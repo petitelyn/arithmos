@@ -18,10 +18,10 @@ makeResults2.3.1 <- reactive({
   dataset[,1] <- as.character(dataset[,1])
   info1 <- paste("Most statistically significant variable: ",dataset[1,1])
   info2 <- paste("No. of variables with p < 0.05: ",sum(dataset$PValue < 0.05,na.rm=T))
-  #info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
+  info3 <- paste("No. of variables with q < 0.05: ",sum(dataset$QValue < 0.05))
   cat(info1, "\n")
   cat(info2, "\n")
-  #cat(info3, "\n")
+  cat(info3, "\n")
 })
 
 #Function to produce the help text for the correlation significance table
@@ -40,15 +40,15 @@ helpText2.3.1 <- reactive({
   info4 <- paste("n: Number of paired samples")
   info5 <- paste(r, " = correlation coefficient", sep = "")
   info6 <- paste("PValue: Significance level")
-  #info7 <- paste("QValue: Adjusted P-Value")
+  info7 <- paste("QValue: Adjusted P-Value")
   
-  cat(sprintf(info1), "\n")
-  cat(sprintf(info2), "\n")
-  cat(sprintf(info3), "\n") 
-  cat(sprintf(info4), "\n")
-  cat(sprintf(info5), "\n")
-  cat(sprintf(info6), "\n")
-  #cat(sprintf(info7), "\n")
+  cat(info1, "\n")
+  cat(info2, "\n")
+  cat(info3, "\n") 
+  cat(info4, "\n")
+  cat(info5, "\n")
+  cat(info6, "\n")
+  cat(info7, "\n")
 })
 
 #Function to produce correlation Significance Table
@@ -62,46 +62,41 @@ makeTable2.3 <- reactive({
     n <- c(n,length(rownames(df)))
   }
   
-  if(input$type2 == "pearson"){
-    df <- data.frame(Variable = rownames(makeText2.1.2()),
+  df <- data.frame(Variable = rownames(makeText2.1.2()),
                      n = n,
                      r = as.numeric(makeText2.1.1()[,colnames(makeText2.1.1()) %in% input$choose_variable_2.3.1]),
                      PValue = as.numeric(makeText2.1.2()[,colnames(makeText2.1.2()) %in% input$choose_variable_2.3.1]),
                      stringsAsFactors = F)
-  }
   
   if(input$type2 == "spearman"){
-    df <- data.frame(Variable = rownames(makeText2.1.2()),
-                     n = n,
-                     rho = as.numeric(makeText2.1.1()[,colnames(makeText2.1.1()) %in% input$choose_variable_2.3.1]),
-                     PValue = as.numeric(makeText2.1.2()[,colnames(makeText2.1.2()) %in% input$choose_variable_2.3.1]),
-                     stringsAsFactors = F)
+    colnames(df)[3] <- "rho"
   }
   
   df <- df[-which(df[,1] == input$choose_variable_2.3.1),]
   df <- df[is.na(df$PValue) == F,]
   p_value <- df$PValue
-  df <- df[df$PValue <  input$choose_alpha_level2.3,]
   df <- df[order(df$PValue),]
-  df
-
+  
   #Insert QValue
-  #p <- as.numeric(df$PValue[!is.na(df$PValue)])
-  # if(max(p) < 0.7){
-  #   q_value <- qvalue(p,lambda=seq(0,0.85,0.05))$qvalues
-  # }
-  # else if(max(p) >= 0.7){
-  #   q_value <- qvalue(p)$qvalues
-  # }
-  # df$QValue <- c(q_value,rep(NA,count_missing(df$PValue)))
+  p <- as.numeric(df$PValue[!is.na(df$PValue)])
+  if(max(p) < 0.7){
+    q_value <- qvalue(p,lambda=seq(0,0.85,0.05))$qvalues
+  }
+  else if(max(p) >= 0.7){
+    q_value <- qvalue(p)$qvalues
+  }
+  df$QValue <- c(q_value,rep(NA,count_missing(df$PValue)))
+  
+  df <- df[df$PValue <  input$choose_alpha_level2.3,]
+  df
 })
 
 #Function to produce the help text for the scatterplot
 makeText2.3.2 <- reactive({
   info1 <- paste("The graph above displays the scatter plot between variables that")
   info2 <- paste("have statistically significant correlation between each other.")
-  cat(sprintf(info1), "\n")
-  cat(sprintf(info2), "\n")
+  cat(info1, "\n")
+  cat(info2, "\n")
 })
 
 #Function to produce scatterplot
@@ -125,12 +120,17 @@ makePlot2.3 <- function(text_size){
       df[,2] <- as.factor(df[,2])
       colnames(df)[c(1,2,3,4)] <- c("ID","Group","Var1","Var2")
     }
+    
+    #Tells ggplot to plot VarX on the X axis, VarY on the Y axis, and
+    #to give a different colour for each dot (of size 2) for different groups
     p <- ggplot(df, aes(x=Var1, y=Var2)) + geom_point(size=2, aes(colour=Group))  +
       scale_colour_hue(l=50) + # Use a slightly darker palette than normal
       geom_smooth(method=lm,   # Add linear regression lines
                   se=FALSE,    # Don't add shaded confidence region
-                  aes(colour = Group),
-                  fullrange=TRUE) +
+                  aes(colour = Group), # Give a different colour for each group
+                  fullrange=TRUE) + #Extrapolate the line to fill the entire graph
+      
+      #Adjustments of theme for the scatterplot
       theme(text = element_text(size=text_size),
             axis.line.x = element_line(colour = "black", size = 1),
             axis.line.y = element_line(colour = "black", size = 1),
@@ -147,11 +147,13 @@ makePlot2.3 <- function(text_size){
     df <- cbind(ID, variable)
     df <- na.omit(df)
     colnames(df)[c(1,2,3)] <- c("ID","Var1","Var2")
+    
+    #Tells ggplot to plot VarX on the X axis and VarY on the Y axis
     p <- ggplot(df, aes(x=Var1, y=Var2)) + geom_point(size=2) + 
       scale_colour_hue(l=50) + # Use a slightly darker palette than normal
       geom_smooth(method=lm,   # Add linear regression lines
                   se=FALSE,    # Don't add shaded confidence region
-                  fullrange=TRUE) +
+                  fullrange=TRUE) + #Extrapolate the line to fill the entire graph
       theme(text = element_text(size=text_size),
             axis.line.x = element_line(colour = "black", size = 1),
             axis.line.y = element_line(colour = "black", size = 1),
