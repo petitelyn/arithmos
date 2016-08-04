@@ -61,7 +61,7 @@ makePlot1.3.2 <- function(){
               axis.title.y = element_text(margin=margin(0,20,0,0)),
               axis.text.x = element_text(margin=margin(10,0,0,0)),
               axis.text.y = element_text(margin=margin(0,10,0,0)),
-              plot.title = element_text(margin=margin(0,0,10,0))) + xlab(input$select1.3.2) + ylab(input$var_interest) +
+              plot.title = element_text(margin=margin(0,0,10,0))) + xlab(input$select1.3.2) + ylab(input$var_interest) + scale_colour_discrete(name = input$type1.3.2.2) +
         ggtitle(input$main1.3.2)
     }
     
@@ -92,7 +92,7 @@ makePlot1.3.2 <- function(){
     p
   }
   
-  #Boxplot, Y(Continuous) vs X(Categorical)
+  #Boxplot, Y(Categorical) vs X(Continuous)
   else if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
     variable <- dataset[,colnames(dataset) %in% input$select1.3.2,drop=F]
     group_var <- group[,colnames(group) %in% input$var_interest,drop=F]
@@ -119,7 +119,7 @@ makePlot1.3.2 <- function(){
     p
   }
   
-  #Boxplot, Y(Categorical) vs X(Continuous)
+  #Boxplot, Y(Continuous) vs X(Categorical)
   else if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(group)){
     variable <- dataset[,colnames(dataset) %in% input$var_interest,drop=F]
     group_var <- group[,colnames(group) %in% input$select1.3.2,drop=F]
@@ -134,7 +134,7 @@ makePlot1.3.2 <- function(){
       
       #Adjustments of theme for the boxplot
       theme(text = element_text(size=15), 
-            axis.text.x = element_text(hjust=1, margin=margin(10,0,0,0)),
+            axis.text.x = element_text(angle=45, hjust=1, margin=margin(10,0,0,0)),
             axis.text.y = element_text(margin=margin(0,10,0,0)),
             panel.border = element_rect(colour = "black", fill=NA, size=1),
             legend.key.height = unit(2.5, "line"),
@@ -156,7 +156,24 @@ makePlot1.3.2 <- function(){
     freq=table(col(df), as.matrix(df))
     counts <- ddply(df, .(df[,1], df[,2]), nrow)
     
+    #Creates a 0 value for those combinations of categorical variables not present
+    #in the frequency table
+    for(i in unique(counts[,1])){
+      for(j in unique(counts[,2])){
+        a <- 0
+        for(k in 1:length(rownames(counts))){
+          if(i == counts[k,1] & j == counts[k,2]){
+            a <- a + 1
+          }
+        }
+        if(a == 0){
+          counts <- rbind(counts,c(i,j,0))
+        }
+      }
+    }
+    
     colnames(counts) <- c("VarX","VarY","value")
+    counts[,3] <- as.numeric(counts[,3])
     
     #Plotting the barplot
     ggplot(counts, aes(VarX, value)) +   
@@ -164,6 +181,180 @@ makePlot1.3.2 <- function(){
       ggtitle(input$main1.3.2) + scale_fill_discrete(name = input$var_interest) + theme(text = element_text(size=15))
   }
 }
+
+#Function to produce boxplot with time traces for continuous predictor and outcome of interest
+makePlot1.3.2.3.1 <- reactive({
+  dataset <- selec_var()[[1]]
+  group <- selec_var()[[2]]
+  variable <- dataset[,gsub("_.*","",colnames(dataset)) %in% gsub("_.*","",input$type1.3.2.5),drop = FALSE]
+  colnames(variable) <- paste(rep("Visit",length(colnames(variable))), gsub("^.*?_","",colnames(variable)))
+  if(input$type1.3.2.3 == 1){
+    group <- group[,colnames(group) %in% input$type1.3.2.4,drop = FALSE]
+    variable$Group <- as.factor(group[,1])
+    variable <- na.omit(variable)
+    df <- melt(variable, id.vars = "Group")
+    
+    #Tells ggplot to plot variable on the X axis, the value on the Y axis, and
+    #to give a different colour for each group
+    p <- ggplot(df, aes(variable, value, fill = Group)) + 
+      
+      #Gives a fixed width for each boxplot.
+      geom_boxplot(width = (0.1 * length(colnames(variable)))) + 
+      
+      #Adjustments of theme for the boxplot
+      theme(text = element_text(size=15), 
+            axis.text.x = element_text(angle=45, hjust=1, margin=margin(10,0,0,0)),
+            axis.text.y = element_text(margin=margin(0,10,0,0)),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            legend.key.height = unit(2.5, "line"),
+            axis.title.x = element_text(margin=margin(20,0,0,0)),
+            axis.title.y = element_text(margin=margin(0,20,0,0)),
+            plot.title = element_text(margin=margin(0,0,20,0))) +
+      ggtitle(input$main1.3.2.3) + xlab("Timepoint") + ylab(gsub("_.*","",input$type1.3.2.5)) + scale_fill_discrete(name = input$type1.3.2.4)
+    p
+  }
+  else{
+    df <- melt(variable)
+    
+    #Tells ggplot to plot variable on the X axis, the value on the Y axis, and
+    #to give a different colour for each variable
+    p <- ggplot(df, aes(variable, value, fill = variable)) + 
+      
+      #Gives a fixed width for each boxplot.
+      geom_boxplot(width = (0.1 * length(colnames(variable)))) +
+      
+      #Adjustments of theme for the boxplot
+      theme(text = element_text(size=15), 
+            axis.text.x = element_text(angle=45, hjust=1,margin=margin(10,0,0,0)),
+            axis.text.y = element_text(margin=margin(0,10,0,0)),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            axis.title.x = element_text(margin=margin(20,0,0,0)),
+            axis.title.y = element_text(margin=margin(0,20,0,0)),
+            plot.title = element_text(margin=margin(0,0,20,0)),
+            legend.key.height = unit(2.5, "line")) +
+      ggtitle(input$main1.3.2.3) + xlab("Timepoint") + ylab(gsub("_.*","",input$type1.3.2.5)) 
+    p
+  }
+})
+
+#Function to produce boxplot with time traces and subgroup for continuous predictor 
+#and categorical outcome of interest (and vice versa)
+makePlot1.3.2.3.2 <- reactive({
+  dataset <- selec_var()[[1]]
+  group <- selec_var()[[2]]
+  if(input$plottype1.3.2.3 == 2){
+    
+    if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
+      variable <- dataset[,gsub("_.*","",colnames(dataset)) %in% gsub("_.*","",input$select1.3.2),drop = FALSE]
+      
+      #Replace variable names with visit 1, visit 2, and so on
+      colnames(variable) <- paste(rep("Visit",length(colnames(variable))), gsub("^.*?_","",colnames(variable)))
+      
+      group <- group[,colnames(group) %in% input$var_interest,drop = FALSE]
+      variable$Group <- as.factor(group[,1])
+      variable <- na.omit(variable)
+      df <- melt(variable, id.vars = "Group")
+      
+      #Tells ggplot to plot variable on the X axis, the value on the Y axis, and
+      #to give a different colour for each group
+      p <- ggplot(df, aes(variable, value, fill = Group)) + 
+        
+        #Transpose the graph
+        coord_flip() + 
+        
+        #Gives a fixed width for each boxplot
+        geom_boxplot(width = (0.15 * length(colnames(variable)))) + 
+        
+        #Adjustments of theme for the boxplot
+        theme(text = element_text(size=15), 
+              axis.text.x = element_text(margin=margin(10,0,0,0)),
+              axis.text.y = element_text(margin=margin(0,10,0,0)),
+              panel.border = element_rect(colour = "black", fill=NA, size=1),
+              legend.key.height = unit(2.5, "line"),
+              axis.title.x = element_text(margin=margin(20,0,0,0)),
+              axis.title.y = element_text(margin=margin(0,20,0,0)),
+              plot.title = element_text(margin=margin(0,0,20,0))) +
+        ggtitle(input$main1.3.2.3) + xlab("Timepoint") + ylab(gsub("_.*","",input$select1.3.2)) + scale_fill_discrete(name = input$var_interest)
+      p
+    }
+    
+    else{
+      variable <- dataset[,gsub("_.*","",colnames(dataset)) %in% gsub("_.*","",input$var_interest),drop = FALSE]
+      
+      #Replace variable names with visit 1, visit 2, and so on
+      colnames(variable) <- paste(rep("Visit",length(colnames(variable))), gsub("^.*?_","",colnames(variable)))
+      
+      group <- group[,colnames(group) %in% input$select1.3.2,drop = FALSE]
+      variable$Group <- as.factor(group[,1])
+      variable <- na.omit(variable)
+      df <- melt(variable, id.vars = "Group")
+      
+      #Tells ggplot to plot variable on the X axis, the value on the Y axis, and
+      #to give a different colour for each group
+      p <- ggplot(df, aes(variable, value, fill = Group)) + 
+        
+        #Gives a fixed width for each boxplotv
+        geom_boxplot(width = (0.15 * length(colnames(variable)))) + 
+        
+        #Adjustments of theme for the boxplot
+        theme(text = element_text(size=15), 
+              axis.text.x = element_text(angle=45, hjust=1, margin=margin(10,0,0,0)),
+              axis.text.y = element_text(margin=margin(0,10,0,0)),
+              panel.border = element_rect(colour = "black", fill=NA, size=1),
+              legend.key.height = unit(2.5, "line"),
+              axis.title.x = element_text(margin=margin(20,0,0,0)),
+              axis.title.y = element_text(margin=margin(0,20,0,0)),
+              plot.title = element_text(margin=margin(0,0,20,0))) +
+        ggtitle(input$main1.3.2.3) + ylab(gsub("_.*","",input$select1.3.2)) + xlab("Timepoint")  + scale_fill_discrete(name = input$select1.3.2)
+      p
+    }
+  }
+  else{
+    if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
+      variable <- dataset[,colnames(dataset) %in% input$select1.3.2, drop = FALSE]
+      group1 <- group[,colnames(group) %in% input$var_interest,drop = FALSE]
+      group2 <- group[,colnames(group) %in% input$type1.3.2.4,drop = FALSE]
+      variable$Group <- as.factor(group1[,1])
+      variable$Group1 <- as.factor(group2[,1])
+      variable <- na.omit(variable)
+      df <- melt(variable, id.vars = c("Group","Group1"))
+      
+      p <- ggplot(df, aes(Group1, value, fill = Group)) + coord_flip() + geom_boxplot(width = (0.3 * length(unique(group1)))) + 
+        theme(text = element_text(size=15), 
+              axis.text.x = element_text(margin=margin(10,0,0,0)),
+              axis.text.y = element_text(margin=margin(0,10,0,0)),
+              panel.border = element_rect(colour = "black", fill=NA, size=1),
+              legend.key.height = unit(2.5, "line"),
+              axis.title.x = element_text(margin=margin(20,0,0,0)),
+              axis.title.y = element_text(margin=margin(0,20,0,0)),
+              plot.title = element_text(margin=margin(0,0,20,0))) +
+        ggtitle(input$main1.3.2.3) + xlab(input$type1.3.2.4) + ylab(input$select1.3.2) + scale_fill_discrete(name = input$var_interest)
+      p
+    }
+    
+    else{
+      variable <- dataset[,colnames(dataset) %in% input$var_interest, drop = FALSE]
+      group1 <- group[,colnames(group) %in% input$select1.3.2,drop = FALSE]
+      group2 <- group[,colnames(group) %in% input$type1.3.2.4,drop = FALSE]
+      variable$Group <- as.factor(group1[,1])
+      variable$Group1 <- as.factor(group2[,1])
+      variable <- na.omit(variable)
+      df <- melt(variable, id.vars = c("Group","Group1"))
+      
+      p <- ggplot(df, aes(Group1, value, fill = Group)) + coord_flip() + geom_boxplot(width = (0.3 * length(unique(group1)))) + 
+        theme(text = element_text(size=15), 
+              axis.text.x = element_text(margin=margin(10,0,0,0)),
+              axis.text.y = element_text(margin=margin(0,10,0,0)),
+              panel.border = element_rect(colour = "black", fill=NA, size=1),
+              legend.key.height = unit(2.5, "line"),
+              axis.title.x = element_text(margin=margin(20,0,0,0)),
+              axis.title.y = element_text(margin=margin(0,20,0,0)),
+              plot.title = element_text(margin=margin(0,0,20,0))) +
+        ggtitle(input$main1.3.2.3) + xlab(input$type1.3.2.4) + ylab(input$var_interest) + scale_fill_discrete(name = input$select1.3.2)
+      p
+    }
+  }
+})
 
 #Function to produce the help text to explain each visuzaliation plot
 helpText1.3.2 <- function(){
@@ -205,6 +396,29 @@ helpText1.3.2 <- function(){
   }
 }
 
+#Function to produce the help text to explain the boxplot with time traces & boxplot by subgroup
+helpText1.3.2.3 <- reactive({
+  dataset <- selec_var()[[1]]
+  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
+    info1 <- paste("The boxplot with time traces allows one to vizualize how the selected continuous variable")
+    info2 <- paste("changes across time.")
+    cat(info1,"\n")
+    cat(info2,"\n")
+  }
+  else{
+    info1 <- paste("The boxplot with time traces allows one to vizualize how the selected continuous variable")
+    info2 <- paste("changes across time.")
+    info3 <- paste("")
+    info4 <- paste("The boxplot by subgroup allows one to determine if the signifiance of a variable is caused")
+    info5 <- paste("by another categorical variable.")
+    cat(info1,"\n")
+    cat(info2,"\n")
+    cat(info3,"\n")
+    cat(info4,"\n")
+    cat(info5,"\n")
+  }
+})
+
 output$select1_3_2 <- renderUI({
   if(input$sub_subfunction == 2){
     df1 <- makeTable1.3.1()
@@ -224,30 +438,24 @@ listb[["1-3-2"]] <- tagList(uiOutput("title1.3.2"),
                             ),
                             textInput("main1.3.2", "Key in the title of plot"),
                             plotOutput("plot1_3_2",hover = "plot1_hover1.3.2", brush = "plot1_brush1.3.2"),
-                            br(),
-                            uiOutput("lst1.3.2"),
                             
                             br(),
                             
-                            uiOutput("lst1.3.3"),
+                            uiOutput("lst1.3.2.1"),
                             
                             br(),
-                            hidden(verbatimTextOutput("helptext1.3.2")))
+                            
+                            uiOutput("lst1.3.2.2"),
+                            
+                            br(),
+                            hidden(verbatimTextOutput("helptext1.3.2")),
+                            
+                            br(),
+                            
+                            uiOutput("lst1.3.2.3"),
+                            hidden(verbatimTextOutput("helptext1.3.2.3")))
 
 #Produce interaction table only when both variables are continuous
-output$lst1.3.3 <- renderUI({
-  dataset <- selec_var()[[1]]
-  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
-    tagList(fluidRow(
-      column(6, hidden(textOutput("hovered1.3.2")),
-             hidden(uiOutput("uiExample1.3.2.1")),
-             hidden(verbatimTextOutput("hover_info1.3.2"))),
-      column(6, hidden(textOutput("selected1.3.2")),
-             hidden(uiOutput("uiExample1.3.2.2")),
-             hidden(verbatimTextOutput("brush_info1.3.2")))))
-  }
-})
-
 output$title1.3.2 <- renderUI({
   h3(makeTitle1.3.2())
 })
@@ -263,7 +471,6 @@ output$Type1.3.2.1 <- renderUI({
 })
 
 output$Type1.3.2.2 <- renderUI({
-  dataset <- selec_var()[[1]]
   if(input$type1.3.2.1 == 1){
     selectizeInput("type1.3.2.2", "Select group variable", choices = colnames(selec_var()[[2]]), multiple = F)
   }
@@ -275,25 +482,6 @@ output$Type1.3.2.2 <- renderUI({
 output$plot1_3_2 <- renderPlot({
   makePlot1.3.2()
 })
-
-output$lst1.3.2 <- renderUI({
-  dataset <- selec_var()[[1]]
-  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
-    tagList(downloadButton('downloadPlot1.3.2', 'Download plot as pdf'),
-            actionButton("inter1.3.2","Display interactivity"),
-            actionButton("help1.3.2","Help",icon=icon("question-circle")))
-  }
-  else{
-    tagList(downloadButton('downloadPlot1.3.2', 'Download plot as pdf'),
-            actionButton("help1.3.2","Help",icon=icon("question-circle")))
-  }
-})
-
-output$downloadPlot1.3.2 <- downloadHandler(
-  filename = function() {
-    paste(makeTitle1.3.2(),'.pdf', sep='')},
-  content = function(file) {
-    ggsave(file, makePlot1.3.2(), dpi = 300, width = 30, height = 20, units = "cm")})
 
 #Enables the "Display Interactivity" button to produce interaction table for the scatterplot when clicked
 observeEvent(input$inter1.3.2, {
@@ -392,6 +580,171 @@ observeEvent(input$help1.3.2, {
   toggle("helptext1.3.2")
 })
 
+output$lst1.3.2.1 <- renderUI({
+  dataset <- selec_var()[[1]]
+  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
+    tagList(downloadButton('downloadPlot1.3.2', 'Download plot as pdf'),
+            actionButton("inter1.3.2","Display interactivity"),
+            actionButton("help1.3.2","Help",icon=icon("question-circle")))
+  }
+  else{
+    tagList(downloadButton('downloadPlot1.3.2', 'Download plot as pdf'),
+            actionButton("help1.3.2","Help",icon=icon("question-circle")))
+  }
+})
+
+output$downloadPlot1.3.2 <- downloadHandler(
+  filename = function() {
+    paste(makeTitle1.3.2(),'.pdf', sep='')},
+  content = function(file) {
+    ggsave(file, makePlot1.3.2(), dpi = 300, width = 30, height = 20, units = "cm")})
+
+output$lst1.3.2.2 <- renderUI({
+  dataset <- selec_var()[[1]]
+  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
+    tagList(fluidRow(
+      column(6, hidden(textOutput("hovered1.3.2")),
+             hidden(uiOutput("uiExample1.3.2.1")),
+             hidden(verbatimTextOutput("hover_info1.3.2"))),
+      column(6, hidden(textOutput("selected1.3.2")),
+             hidden(uiOutput("uiExample1.3.2.2")),
+             hidden(verbatimTextOutput("brush_info1.3.2")))))
+  }
+})
+
 output$helptext1.3.2 <- renderPrint({
   helpText1.3.2()
+})
+
+output$lst1.3.2.3 <- renderUI({
+  dataset <- selec_var()[[1]]
+  group <- selec_var()[[2]]
+  
+  #Continuous (X) vs Continuous (Y) - only boxplot with time traces
+  #Continuous (X) vs Categorical (Y) - both boxplot with time traces and boxplot by subgroup
+  #Categorical (X) vs Continuous (Y) - only boxplot with time traces and boxplot by subgroup 
+  #Categorical (X) vs Categorical (Y) - no advance visualization
+  if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(dataset)){
+    tagList(h2("Advanced Visualization"),
+            
+            br(),
+      
+            h3("Boxplot by timepoint"),
+            fluidRow(
+              column(4, radioButtons("type1.3.2.3", "Display by group variable?", choices = c("Yes" = 1, "No" = 2), selected = 2, inline = T)),
+              column(8, uiOutput("Type1.3.2.4"))
+            ),
+            
+            uiOutput("Type1.3.2.5"),
+            
+            textInput("main1.3.2.3", "Key in the title of plot"),
+            plotOutput("plot1.3.2.3.1",height = "600px"),
+            downloadButton('downloadPlot1.3.2.3.1', 'Download plot as pdf'),
+            actionButton("help1.3.2.3","Help",icon=icon("question-circle")))
+  }
+  else if(input$var_interest %in% colnames(dataset) & input$select1.3.2 %in% colnames(group)){
+    tagList(h2("Advanced Visualization"),
+            
+            br(),
+            
+            uiOutput("title1.3.2.3"),
+            radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
+            uiOutput("group1.3.2.3"),
+            textInput("main1.3.2.3", "Key in the title of plot"),
+            plotOutput("plot1.3.2.3.2",height = "600px"),
+            downloadButton('downloadPlot1.3.2.3.2', 'Download plot as pdf'),
+            actionButton("help1.3.2.3","Help",icon=icon("question-circle")))
+  }
+  else if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
+    tagList(h2("Advanced Visualization"),
+            
+            br(),
+            
+            uiOutput("title1.3.2.3"),
+            radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
+            uiOutput("group1.3.2.3"),
+            textInput("main1.3.2.3", "Key in the title of plot"),
+            plotOutput("plot1.3.2.3.2",height = "600px"),
+            downloadButton('downloadPlot1.3.2.3.2', 'Download plot as pdf'),
+            actionButton("help1.3.2.3","Help",icon=icon("question-circle")))
+  }
+  else{
+    return()
+  }
+})
+
+downloadtitle1.3.2.3 <- reactive({
+  if(input$plottype1.3.2.3 == 1){
+    paste("Boxplot by", input$type1.3.2.4)
+  }
+  else if(input$plottype1.3.2.3 == 2){
+    "Boxplot by timepoint"
+  }
+})
+
+output$downloadPlot1.3.2.3.1 <- downloadHandler(
+  filename = function() {
+    paste("Boxplot by timepoint",'.pdf', sep='')},
+  content = function(file) {
+    ggsave(file, makePlot1.3.2.3.1(), dpi = 300, width = 30, height = 20, units = "cm")})
+
+output$downloadPlot1.3.2.3.2 <- downloadHandler(
+  filename = function() {
+    paste(downloadtitle1.3.2.3(),'.pdf', sep='')},
+  content = function(file) {
+    ggsave(file, makePlot1.3.2.3.2(), dpi = 300, width = 30, height = 20, units = "cm")})
+
+output$title1.3.2.3 <- renderUI({
+  if(input$plottype1.3.2.3 == 1){
+    h3("Boxplot by subgroup")
+  }
+  else{
+    h3("Boxplot by timepoint")
+  }
+})
+
+output$Type1.3.2.4 <- renderUI({
+  if(input$type1.3.2.3 == 1){
+    selectizeInput("type1.3.2.4", "Select group variable", choices = colnames(selec_var()[[2]]), multiple = F)
+  }
+  else{
+    return()
+  }
+})
+
+output$Type1.3.2.5 <- renderUI({
+  selectizeInput("type1.3.2.5", "Select variable to plot", choices = c(input$var_interest,input$select1.3.2), multiple = F)
+})
+
+output$group1.3.2.3 <- renderUI({
+  dataset <- selec_var()[[1]]
+  group <- selec_var()[[2]]
+  choic <- colnames(group)
+  if(input$plottype1.3.2.3 == 1){
+    if(input$var_interest %in% colnames(group) & input$select1.3.2 %in% colnames(dataset)){
+      selectizeInput("type1.3.2.4", "Select group variable", choices = choic[-which(choic == input$var_interest)], multiple = F)
+    }
+    else{
+      selectizeInput("type1.3.2.4", "Select group variable", choices = choic[-which(choic == input$select1.3.2)], multiple = F)
+    }
+  }
+  else{
+    return()
+  }
+})
+
+output$plot1.3.2.3.1 <- renderPlot({
+  makePlot1.3.2.3.1()
+})
+
+output$plot1.3.2.3.2 <- renderPlot({
+  makePlot1.3.2.3.2()
+})
+
+observeEvent(input$help1.3.2.3, {
+  toggle("helptext1.3.2.3")
+})
+
+output$helptext1.3.2.3 <- renderPrint({
+  helpText1.3.2.3()
 })

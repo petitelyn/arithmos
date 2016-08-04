@@ -48,7 +48,10 @@ helpText1.2 <- function(){
 }
 
 listb[["1-2"]] <- tagList(h3("Boxplot"),
-                          uiOutput("Select_all1.2"),
+                          fluidRow(
+                            column(4, uiOutput("Select_all1.2")),
+                            column(8, radioButtons("type1.2", "Sort variables by", choices = c("Alphabetical Order" = 1, "Median" = 2), selected = 1, inline = T))
+                          ),
                           uiOutput("Choice1.2"),
                           uiOutput("Main1.2"),
                           plotOutput("plot1.2", height = "1000px"),
@@ -77,20 +80,43 @@ output$Select_all1.2 <- renderUI({
 
 
 output$Choice1.2 <- renderUI({
+  dataset <- selec_var()[[1]]
+  var_name <- NULL
+  med <- NULL
+  
+  #Sort variables by its median
+  for(i in 1:length(colnames(dataset))){
+    var_name <- c(var_name,colnames(dataset)[i])
+    med <- c(med,median(dataset[,i],na.rm=T))
+  }
+  var_name <- as.character(var_name)
+  df1 <- cbind(var_name, med)
+  df1 <- data.frame(df1,stringsAsFactors = F)
+  df1[,2] <- as.numeric(as.character(df1[,2]))
+  df1 <- df1[order(df1[,2]),]
+  
+  if(input$type1.2 == 1){
+    choice <- colnames(dataset)
+  }
+  
+  if(input$type1.2 == 2){
+    choice <- df1[,1]
+  }
+  
   if(input$select_all1.2 == 2){
-    selectizeInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = colnames(selec_var()[[1]]), 
+    selectizeInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = choice, 
                    multiple = T)
   }
   else if(input$select_all1.2 == 1){
     
     #Limit the size of box such that it only displays a maximum of 10 variables
     if(length(selec_var()[[1]]) > 10){
-      selectInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = colnames(selec_var()[[1]]), 
-                  multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = 10)
+      selectInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = choice, 
+                  multiple = T, selectize = F, selected = choice, size = 10)
     }
     else{
-      selectInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = colnames(selec_var()[[1]]), 
-                  multiple = T, selectize = F, selected = colnames(selec_var()[[1]]), size = length(selec_var()[[1]]))
+      selectInput("choose_variable1.2", "Select variables for the boxplot (max 20)", choices = choice, 
+                  multiple = T, selectize = F, selected = choice, size = length(choice))
     }
   }
 })

@@ -3,10 +3,10 @@
 CONTENTS OF THIS FILE
 ---------------------
  * [Introduction](#introduction)
+ * [Configuration](#configuration)
  * [Requirements](#requirements)
  * [Code Architecture](#code-architecture)
  * [Database Architecture](#database-architecture)
- * [Configuration](#configuration)
  * [Study Format](#study-format)
  * [Converting a Study](#converting-a-study)
  * [Todo](#todo)
@@ -17,6 +17,11 @@ INTRODUCTION
 
   Arithmos is a private statistics tool for Danone Nutricia Research Centre. The goal of the project is to have in-house statistics software built on top of a private database so scientists can run analyses easily and without file manipulation. 
  
+CONFIGURATION
+---------------------
+
+R 3.0, Shiny Server v1.4, PostgreSQL 9.5, and all packages listed in [requirements](#requirements) must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.
+
 REQUIREMENTS
 ---------------------
 
@@ -33,7 +38,7 @@ Arithmos is built using the Shiny, a web application framework for R developed b
  * __plyr__: Provides the function "ddply" for the barplot and PCA biplot
  * __pracma__: For the strcmp function
  * __psych__: Gives the "describe" function which displays basic statistics of a variable such as mean and median
- * __qvalue__: Computes Q value
+ * __qvalue__: Computes Q value  __WARNING__: when installing qvalue must not update packages
  * __rJava__: To install "XLConnect" and "XLConnectJars" package
  * __RColorBrewer__: Provides more options for type of colours used for heatmaps
  * __reshape2__: Converts variable to long/wide format
@@ -92,11 +97,6 @@ The file database_documentation.html in the misc directory contains a summary on
  * __study to variable__ is in theory __one to many__. A single variable found in multiple studies of the same project may offer problems when merging the studies for analysis
  
  The code that actually builds the database is found in complexDatabaseCommunication, in the function createDatabase.
-
-CONFIGURATION
----------------------
-
-R 3.0, Shiny Server, PostgreSQL, and all packages listed in [requirements](#requirements) must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.
 
 STUDY FORMAT
 ---------------------

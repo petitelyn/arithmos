@@ -141,6 +141,18 @@
   {
       display:none;
   }
+
+#refresh {
+    position:absolute;
+    
+    top:0;
+    right:0;
+     color:#d3d3d3;
+    background-color: transparent;
+    border-color: #d3d3d3;
+  }
+
+
 /* End of my custom CSS. The rest is the bootswatch theme */
 
 html {

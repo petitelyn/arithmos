@@ -17,6 +17,18 @@ shinyServer(function(input, output, session) {
   values$fulldata <- NULL
   values$name <- NULL
   
+  checkData <- reactiveTimer(1000000)
+  
+  observe({
+    checkData()
+    con <- connectDatabase()
+    get_projects <- "SELECT project_code FROM project"
+    project_list <- dbGetQuery(con, get_projects)[["project_code"]]
+    updateSelectInput(session, "projectChoice", choices=project_list, selected=input$projectChoice)
+    #updateSelectInput(session, "projectChoice", choices=project_list)
+    dbDisconnect(con)
+  })
+  
   session$onSessionEnded(function() {
     #close the session's connection upon exit
     observe(dbDisconnect(values$con))

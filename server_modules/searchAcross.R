@@ -36,7 +36,7 @@ acrossVariableTable <- observeEvent(input$across, {
 #help buttons
 output$acrossSearchHelp <- renderUI({
   tipify(bsButton("pC2", "Help", icon=icon("question-circle"),  size = "extra-small"),
-         "Group = Outcomes of interest    Variables = Other measurements",
+         "Group = Outcomes of interest    Variables = Other measurements       Sample Type = Cell or blood type",
          placement = "right")
 })
 output$acrossTextSearchHelp <- renderUI({

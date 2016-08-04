@@ -32,6 +32,7 @@ shinyUI(fluidPage(theme="all_css.css", shinyjs::useShinyjs(),
             
           #restart button, persistent in the sidebar panel
           actionButton("restart","",icon=icon("home"), class="faded-button"),
+          #actionButton("refresh", '', icon=icon("refresh")),
         
             div(id="uploadAndLoad", 
                 h3("Study Selection", class="no-top"),
@@ -77,7 +78,7 @@ shinyUI(fluidPage(theme="all_css.css", shinyjs::useShinyjs(),
       mainPanel(
         div(id="mainPanel",
         div(id="acrossSearchPanel",
-            #the following tags keep errors from being displayed in
+            #the following tags keep errors from being displayed in the server
             tags$style(type="text/css",
                        ".shiny-output-error { visibility: hidden; }",
                        ".shiny-output-error:before { visibility: hidden; }"

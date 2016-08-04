@@ -75,6 +75,10 @@ upload_data  <- observeEvent(input$file,{
   updateStudies()
   progress$close()
   invalidateLater(0, session)
+  #update all of the inputs based on the new studies that were uploaded
+  updateProjects(return_code)
+  #need this extra call to updateStudies to refresh studies 
+  updateStudies()
 })
 
 #updates the current selectable studies
@@ -144,5 +148,16 @@ loadData <- observeEvent(input$load, {
     #switch to the processing UI panel
     session$sendCustomMessage (type="switch", "process")
     incProgress(1/4)
+  })
+})
+
+#Refresh button
+ref <- observeEvent(input$refresh, {
+  withProgress(message="Refreshing data", max=1, min=1,{
+    con <- connectDatabase()
+    get_projects <- "SELECT project_code FROM project"
+    project_list <- dbGetQuery(con, get_projects)[["project_code"]]
+    updateSelectInput(session, "projectChoice", choices=project_list)
+    dbDisconnect(con)
   })
 })

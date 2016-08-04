@@ -14,6 +14,7 @@
 */
 Shiny.addCustomMessageHandler ('switch', function (stage) {
     if (stage == 'load') {
+      $('#refresh').show()
       $('#uploadAndLoad').show()
       $('#acrossSearchPanel').show()
       $('#processing').hide()
@@ -23,6 +24,7 @@ Shiny.addCustomMessageHandler ('switch', function (stage) {
       $('#analysisSidebar').hide()
       $('#analysisPanel').hide()
     } else if (stage == 'process'){
+      $('#refresh').hide()
       $('#uploadAndLoad').hide()
       $('#restart').show()
       $('#processing').show()

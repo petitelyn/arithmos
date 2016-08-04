@@ -1,9 +1,9 @@
 #Source code for PCA biplot
-ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE, 
+ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE, vari = NULL,
                       obs.scale = 1 - scale, var.scale = scale, groups = NULL, 
                       ellipse = FALSE, ellipse.prob = 0.68, labels = NULL, labels.size = 3, 
                       alpha = 1, var.axes = TRUE, circle = FALSE, circle.prob = 0.69, 
-                      varname.size = 3, varname.adjust = 1.5, varname.abbrev = FALSE, 
+                      varname.size = 3, varname.adjust = 1.5, varname.abbrev = FALSE, displayMat = F,
                       ...) 
 {
   library(scales)
@@ -73,6 +73,9 @@ ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
   }
   df.v$angle <- with(df.v, (180/pi) * atan(yvar/xvar))
   df.v$hjust = with(df.v, (1 - varname.adjust * sign(xvar))/2)
+  df.v$dist <- sqrt(df.v$xvar^2 + df.v$yvar^2)
+  df.v <- df.v[order(df.v$dist,decreasing = T),]
+  df.v <- df.v[which(rownames(df.v) %in% vari),]
   g <- ggplot(data = df.u, aes(x = xvar, y = yvar)) + xlab(u.axis.labs[1]) + 
     ylab(u.axis.labs[2])
   if (var.axes) {
@@ -126,7 +129,12 @@ ggbiplot <- function (pcobj, choices = 1:2, scale = 1, pc.biplot = TRUE,
                                         x = xvar, y = yvar, angle = angle, hjust = hjust), 
                        color = "darkred", size = varname.size)
   }
-  return(g)
+  if(displayMat){
+    return(df.v)
+  }
+  if(!displayMat){
+    return(g)
+  }
 }
 
 #Function to produce the results table for PCA
@@ -159,7 +167,7 @@ makeText3.2 <- function(){
   variable <- selec_var()[[1]]
   
   rownames(variable) <- values$data[,1]
-  if(length(colnames(variable)) >= 3){
+  if(length(colnames(variable)) > 2){
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
@@ -192,7 +200,7 @@ helpText3.1 <- function(){
 }
 
 #Function to produce PCA biplot
-makePlot3 <- function(text_size){
+makePlot3 <- function(text_size,disa=T,vari=NULL){
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
   group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
@@ -200,14 +208,25 @@ makePlot3 <- function(text_size){
   rownames(variable) <- values$data[,1]
   
   #Imputes missing values for PCA
-  variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  if(length(colnames(variable)) > 2){
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  }
+  
+  if(length(colnames(variable)) <= 2){
+    variable <- cbind(group1,variable)
+    variable <- na.omit(variable)
+    group1 <<- variable[,1]
+    variable <- variable[-1]
+  }
+
   
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
   
-  g <- ggbiplot(var.pca, varname.size = 3, obs.scale = 1, var.scale = 1,
+  g <- ggbiplot(var.pca, varname.size = 3, obs.scale = 1, var.scale = 1, vari = vari,
+                var.axes = disa,
                 choices = c(as.numeric(str_sub(input$type3.2,3)),
                             as.numeric(str_sub(input$type3.3,3))),
-                groups = group1, ellipse = TRUE,
+                groups = group1, ellipse = TRUE, 
                 circle = F) +
     geom_point(aes(color=group1, size = 3)) + scale_size_identity() +
     theme(legend.direction = 'vertical', legend.position = 'right',
@@ -221,6 +240,36 @@ makePlot3 <- function(text_size){
     
     ggtitle(input$main3) + scale_colour_discrete(name = input$choose_group3)
   
+  g
+}
+
+#Function to produce the table that generates the PCA Biplot
+makePCAdf <- function(){
+  variable <- selec_var()[[1]]
+  group <- selec_var()[[2]]
+  group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
+  rownames(variable) <- values$data[,1]
+  
+  #Imputes missing values for PCA
+  if(length(colnames(variable)) > 2){
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  }
+  
+  if(length(colnames(variable)) <= 2){
+    variable <- cbind(group1,variable)
+    variable <- na.omit(variable)
+    group1 <<- variable[,1]
+    variable <- variable[-1]
+  }
+  
+  
+  var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
+  
+  g <- ggbiplot(var.pca, varname.size = 3, obs.scale = 1, var.scale = 1, vari=colnames(selec_var()[[1]]),
+                choices = c(as.numeric(str_sub(input$type3.2,3)),
+                            as.numeric(str_sub(input$type3.3,3))),
+                groups = group1, ellipse = TRUE, 
+                circle = F,displayMat=T) 
   g
 }
 
@@ -247,23 +296,43 @@ listb[["3"]] <- tagList(h3('Table of results explained by PC'),
                         hidden(verbatimTextOutput("helptext3.1")),
                         verbatimTextOutput('text3.2'),
                         
-                        br(),
+                        hr(),
                         
+                        h4('Control Panel'),
                         fluidRow(
                           column(4, uiOutput("Choice3.1")),
                           column(4, uiOutput("Choice3.2"))
                         ),
                         
                         fluidRow(
-                          column(4,uiOutput("chooseGroup3"))
+                          column(6,uiOutput("chooseGroup3"))
                         ),
+                        
+                        fluidRow(
+                          column(3,radioButtons("disable3", "Disable variable labels?", choices = c("Yes" = F, "No" = T), selected = F, inline = T)),
+                          column(4,uiOutput("selectAll3"))
+                        ),
+                        
+                        fluidRow(
+                          column(6,uiOutput("Choice3.3"))
+                        ),
+                        
+                        uiOutput("uiExample3"),
+                        
+                        br(),
+                        textInput("main3", "Key in the title of PCA plot"),
                         
                         br(),
                         
-                        textInput("main3", "Key in the title of PCA plot"),
+                        actionButton('plotPCA', 'Plot PCA'),
+                        
+                        hr(),
+                        br(),
+                        
                         plotOutput("plot3", height = 800, width = 800, hover = "plot1_hover3", brush = "plot1_brush3"),
                         br(),
                         downloadButton('downloadPlot3', 'Download plot as pdf'),
+                        downloadButton('downloadData3.1', 'Download variable list'),
                         actionButton("inter3","Display interactivity"),
                         actionButton("help3.2","Help",icon=icon("question-circle")),
                         
@@ -284,6 +353,81 @@ listb[["3"]] <- tagList(h3('Table of results explained by PC'),
                         hidden(verbatimTextOutput("helptext3.2"))
 )
 
+output$uiExample3 <- renderUI({
+  if(input$disable3 == F){
+    return()
+  }
+  else if(input$select_all3 == 2 & input$disable3 == T){
+    h6("Variables are sorted in descending order by their contribution in PCA.")
+  }
+  else{
+    return()
+  }
+})
+
+
+plotPCA <- eventReactive(input$plotPCA,{
+  withProgress(message = 'Plotting PCA',value = 0, {
+    df <- makePCAdf()
+    incProgress(1/2)
+    if(input$disable3 == F){
+      #Plot biplot with no variable labels
+      p <- makePlot3(15,F,colnames(selec_var()[[1]]))
+    }
+    else if(input$select_all3 == 1){
+      if(length(colnames(selec_var()[[1]])) > 20){
+        #Plot biplot with the first 20 selected variable labels
+        p <- makePlot3(15,input$disable3,rownames(df)[1:20])
+      }
+      else{
+        #Plot biplot with maximum variable labels
+        p <- makePlot3(15,input$disable3,rownames(df))
+      }
+    }
+    else if(input$select_all3 == 2){
+      if(length(input$choose_variable3) > 0){
+        if(length(input$choose_variable3) > 20){
+          #Plot biplot with the first 20 selected variable labels
+          p <- makePlot3(15,input$disable3,input$choose_variable3[1:20])
+        }
+        else{
+          #Plot biplot with maximum variable labels
+          p <- makePlot3(15,input$disable3,input$choose_variable3)
+        }
+      }
+      else{
+        #Plot biplot with no variable labels if no variables are selected
+        p <- makePlot3(15,F,colnames(selec_var()[[1]]))
+      }
+    }
+    incProgress(1/2)
+    p
+  })
+})
+
+output$Choice3.3 <- renderUI({
+  df <- makePCAdf()
+  if(input$disable3 == F){
+    return()
+  }
+  else if(input$select_all3 == 2 & input$disable3 == T){
+    selectizeInput("choose_variable3", "Select variables for display (max 20)", choices = rownames(df), 
+                   multiple = T)
+  }
+  else{
+    return()
+  }
+})
+
+output$selectAll3<- renderUI({
+  if(input$disable3 == F){
+    return()
+  }
+  else if(input$disable3){
+    radioButtons("select_all3", "Display top 20 variables labels?", choices = c("Yes" = 1, "No" = 2), selected = 1, inline = T)
+  }
+})
+
 output$uiExample3.1 <- renderUI({
   tipify(bsButton("pB31", "Help", icon=icon("question-circle"), size = "extra-small"), placement = "right",
          "Only categorical variables for group variables.")
@@ -296,6 +440,9 @@ output$downloadData3 <- downloadHandler(
     df <- makeText3.2()
     df <- cbind(rownames(df),df)
     df[1,1] <- NA
+    
+    ########################################################################################################################
+    #Insert some basic documentation in the first 7 rows of the data frame, such as title of project, data and time.
     d <- data.frame()
     size <- dim(df)
     d[1:(size[1]+5),] <-NA
@@ -323,6 +470,7 @@ output$downloadData3 <- downloadHandler(
     d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
                     input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
                     input$col_cutoff, "% missing values.", sep = "")
+    ########################################################################################################################
     
     d[8,1] <- paste("Title: PCA Results")
     
@@ -331,6 +479,51 @@ output$downloadData3 <- downloadHandler(
     d[11:(size[1]+10),1] <- rownames(df)
     d[10,1] <- NA
     
+    colnames(d) <- rep("", length(colnames(d)))
+    write.csv(d, file,row.names=F,na="")})
+
+output$downloadData3.1 <- downloadHandler(
+  filename = function() {
+    paste('PCA Variable List','.csv', sep='')},
+  content = function(file) {
+    df <- makePCAdf()[,c(3,6)]
+    
+    ########################################################################################################################
+    #Insert some basic documentation in the first 7 rows of the data frame, such as title of project, data and time.
+    d <- data.frame()
+    size <- dim(df)
+    d[1:(size[1]+5),] <-NA
+    d[,1:(size[2])] <- NA
+    d[1,1] <- "Name of Project:"
+    d[1,2] <- input$projectChoice
+    d[2,1] <- "Date & Time:"
+    d[2,2] <- as.character(Sys.time())
+    d[3,1] <- "Timezone:"
+    d[3,2] <- as.character(Sys.timezone())
+    d[4,1] <- "The data is based on the following files and variables :"
+
+    nam <- "List of files:"
+    for (i in input$studyChoices){
+      nam <- paste(nam,"\n",i,sep = "")
+    }
+    d[4,2] <- nam
+
+    nam1 <- "List of variables:"
+    for (i in input$choose_variable){
+      nam1 <- paste(nam1,"\n",i,sep = "")
+    }
+    d[4,3] <- nam1
+
+    d[6,1] <- paste("This dataset is processed by removing rows that contain more than (and equal to) ",
+                    input$row_cutoff, "% missing values and removing columns that contain more than (and equal to) ",
+                    input$col_cutoff, "% missing values.", sep = "")
+    ########################################################################################################################
+    
+    d[8,1] <- paste("Title: List of variables ranked by their contribution in PCA")
+
+    d[10,1:2] <- colnames(df)
+    d[11:(size[1]+10),1:2] <- df
+
     colnames(d) <- rep("", length(colnames(d)))
     write.csv(d, file,row.names=F,na="")})
 
@@ -355,10 +548,10 @@ output$helptext3.1 <- renderPrint({
 output$text3.2<- renderPrint(
   if(length(colnames(makeText3.2())) > 5){
     makeText3.2()[,1:5]
-  }
+    }
   else{
     makeText3.2()
-  }
+    }
 )
 
 output$Choice3.1 <- renderUI({
@@ -373,8 +566,10 @@ output$Choice3.2<- renderUI({
 
 output$chooseGroup3 <- renderUI({
   selectizeInput("choose_group3", "Select group variable (only categorical variables)",
-                 choices = colnames(selec_var()[[2]]), multiple = F)
+                 choices = colnames(selec_var()[[2]]), multiple = F, width = 600)
 })
+
+
 
 #Enables the "Help" button to produce the help text for PCA biplot when clicked
 observeEvent(input$help3.2, {
@@ -389,10 +584,10 @@ output$downloadPlot3 <- downloadHandler(
   filename = function() {
     paste('PCA Biplot','.pdf', sep='')},
   content = function(file) {
-    ggsave(file, makePlot3(15), dpi = 300, height = 30, width = 30, units = "cm")})
+    ggsave(file, plotPCA(), dpi = 300, height = 30, width = 30, units = "cm")})
 
 output$plot3 <- renderPlot({
-  makePlot3(15)
+  plotPCA()
 })
 
 #Enables the "Display Interactivity" button to display the interaction table for PCA biplot when clicked
@@ -423,13 +618,25 @@ output$hover_info3 <- renderPrint({
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
   group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
+  nam <- values$data[,1]
   
   rownames(variable) <- values$data[,1]
-  variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   
+  #Imputes missing values for PCA
+  if(length(colnames(variable)) > 2){
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  }
+  
+  if(length(colnames(variable)) <= 2){
+    variable <- cbind(nam,group,variable)
+    variable <- na.omit(variable)
+    nam <- variable[,1]
+    group <- variable[,2]
+    variable <- variable[-c(1:2)]
+  }
   
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
-  df <- cbind(values$data[,1],group,variable,var.pca$x)
+  df <- cbind(nam,group,variable,var.pca$x)
   
   colnames(df)[1:2] <- c("Subject#", input$choose_group3)
   
@@ -444,13 +651,26 @@ output$brush_info3 <- renderPrint({
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
   group <- group[,which(colnames(group) %in% input$choose_group3),drop=F]
+  nam <- values$data[,1]
   
   rownames(variable) <- values$data[,1]
-  variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  
+  #Imputes missing values for PCA
+  if(length(colnames(variable)) > 2){
+    variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
+  }
+  
+  if(length(colnames(variable)) <= 2){
+    variable <- cbind(nam,group,variable)
+    variable <- na.omit(variable)
+    nam <- variable[,1]
+    group <- variable[,2]
+    variable <- variable[-c(1:2)]
+  }
   
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
   
-  df <- cbind(values$data[,1],group,variable,var.pca$x)
+  df <- cbind(nam,group,variable,var.pca$x)
   
   colnames(df)[1:2] <- c("Subject#", input$choose_group3)
   

@@ -140,7 +140,7 @@ makePlot2.3 <- function(text_size){
             axis.text.y = element_text(margin=margin(0,10,0,0)),
             plot.title = element_text(margin=margin(0,0,10,0)),
             legend.key.height = unit(2.5, "line")) + xlab(input$choose_variable_2.3.2) + ylab(input$choose_variable_2.3.3) +
-      scale_fill_discrete(name = input$type2.3.2) + ggtitle(input$main2.3)
+      scale_colour_discrete(name = input$type2.3.2) + ggtitle(input$main2.3)
   }
   
   else if(input$type2.3.1 == 2){
@@ -162,7 +162,7 @@ makePlot2.3 <- function(text_size){
             axis.text.x = element_text(margin=margin(10,0,0,0)),
             axis.text.y = element_text(margin=margin(0,10,0,0)),
             plot.title = element_text(margin=margin(0,0,10,0))) + xlab(input$choose_variable_2.3.2) + ylab(input$choose_variable_2.3.3) +
-      scale_fill_discrete(name = input$type2.3.2) + ggtitle(input$main2.3)
+      ggtitle(input$main2.3)
   }
   p
 }
@@ -291,7 +291,7 @@ output$downloadData2.3 <- downloadHandler(
                     input$col_cutoff, "% missing values.", sep = "")
     ########################################################################################################################
     
-    d[8,1] <- paste("Title: Correlation Table for Continuous Variables")
+    d[8,1] <- paste("Title: Correlation Significance Table for", input$choose_variable_2.3.1)
     d[9,1] <- paste("Type of correlation:",input$type2)
     
     d[11,] <- colnames(df)
@@ -338,6 +338,15 @@ output$Type2.3.1 <- renderUI({
   }
 })
 
+downloadtitle2.3.2 <- reactive({
+  if(input$type2.3.1 == 1){
+    paste(input$choose_variable_2.3.3,"Scatterplot by", input$type2.3.2)
+  }
+  else if(input$type2.3.1 == 2){
+    paste(input$choose_variable_2.3.3,"Scatterplot")
+  }
+})
+
 output$Type2.3.2 <- renderUI({
   if(input$type2.3.1 == 1){
     selectizeInput("type2.3.2", "Select group variable", choices = colnames(selec_var()[[2]]), multiple = F)
@@ -362,7 +371,7 @@ output$Choice2.3.3 <- renderUI({
 
 output$downloadPlot2.3 <- downloadHandler(
   filename = function() {
-    paste('Scatterplot','.pdf', sep='')},
+    paste(downloadtitle2.3.2(),".pdf", sep='')},
   content = function(file) {
     ggsave(file, makePlot2.3(15), dpi = 300, height = 20, width = 30, units = "cm")})
 
