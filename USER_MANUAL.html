@@ -118,166 +118,208 @@ $(document).ready(function () {
 </div>
 
 
-<div id="arithmos-v0.1-documentation" class="section level1">
-<h1><strong>ARITHMOS v0.1 DOCUMENTATION</strong></h1>
+<div id="arithmos-v0.1-user-manual" class="section level1">
+<h1><strong>ARITHMOS v0.1 USER MANUAL</strong></h1>
 <div id="contents-of-this-file" class="section level2">
 <h2>CONTENTS OF THIS FILE</h2>
 <ul>
 <li><a href="#introduction">Introduction</a></li>
-<li><a href="#configuration">Configuration</a></li>
-<li><a href="#requirements">Requirements</a></li>
-<li><a href="#code-architecture">Code Architecture</a></li>
-<li><a href="#database-architecture">Database Architecture</a></li>
-<li><a href="#study-format">Study Format</a></li>
-<li><a href="#converting-a-study">Converting a Study</a></li>
-<li><a href="#todo">Todo</a></li>
+<li><a href="#start-page">1 Start Page</a></li>
+<li><a href="#pre-processing">2 Pre-Processing</a></li>
+<li><a href="control-panel">3 Control Panel</a></li>
+<li><a href="#statistics">4 Statistics</a>
+<ul>
+<li><a href="#statistics-table">4.1 Statistics Table</a></li>
+<li><a href="#boxplot">4.2 Boxplot</a></li>
+<li><a href="#differential-analysis">4.3 Differential Analysis</a>
+<ul>
+<li><a href="#significant-tests">4.3.1 Significant tests</a></li>
+<li><a href="#vizualization">4.3.2 Vizualization</a></li>
+</ul></li>
+</ul></li>
+<li><a href="#correlation">5 Correlation</a>
+<ul>
+<li><a href="#correlation-table">5.1 Correlation Table</a></li>
+<li><a href="#correlation-matrix">5.2 Correlation Matrix</a></li>
+<li><a href="#correlation-advanced-search">5.3 Correlation Advanced Search</a></li>
+</ul></li>
+<li><a href="#principal-component-analysis">6 Principal Component Analysis</a></li>
+<li><a href="#hierarchical-clustering">7 Hierarchical Clustering</a></li>
 <li><a href="#credits">Credits</a></li>
 </ul>
 </div>
 <div id="introduction" class="section level2">
 <h2>INTRODUCTION</h2>
 <p>Arithmos is a private statistics tool for Danone Nutricia Research Centre. The goal of the project is to have in-house statistics software built on top of a private database so scientists can run analyses easily and without file manipulation.</p>
+<p>This user manual is intended for end-users of Arithmos.</p>
 </div>
-<div id="configuration" class="section level2">
-<h2>CONFIGURATION</h2>
-<p>R 3.0, Shiny Server v1.4, PostgreSQL 9.5, and all packages listed in <a href="#requirements">requirements</a> must be installed in order to run the application. A PostgreSQL database with the specs found in connectDatabase of complexDatabaseCommunication.R must be created.</p>
-</div>
-<div id="requirements" class="section level2">
-<h2>REQUIREMENTS</h2>
-<p>Arithmos is built using the Shiny, a web application framework for R developed by RStudio. Along with the obvious requirements of R and Shiny server, the following packages are required to run the application:</p>
+<div id="start-page" class="section level2">
+<h2>1 START PAGE</h2>
 <ul>
-<li><strong>car</strong>: Provides the function “Anova” for multivariate logistic regression models</li>
-<li><strong>ggplot2</strong>: To plot boxplot, scatterplot, barplot, correlation plot and PCA biplot</li>
-<li><strong>gplots</strong>: Provides the function “heatmap.2’</li>
-<li><strong>heatmaply</strong>: Provides interactive heatmap</li>
-<li><strong>laeken</strong>: Provides the function “weightedMean” for “kNN” function</li>
-<li><strong>missMDA</strong>: Provides the function “imputePCA” to impute missing values for PCA</li>
-<li><strong>nnet</strong>: Provides the function “multinom” for multivariate logistic regression models</li>
-<li><strong>plotly</strong>: Provides interactive plot</li>
-<li><strong>plyr</strong>: Provides the function “ddply” for the barplot and PCA biplot</li>
-<li><strong>pracma</strong>: For the strcmp function</li>
-<li><strong>psych</strong>: Gives the “describe” function which displays basic statistics of a variable such as mean and median</li>
-<li><strong>qvalue</strong>: Computes Q value <strong>WARNING</strong>: when installing qvalue must not update packages</li>
-<li><strong>rJava</strong>: To install “XLConnect” and “XLConnectJars” package</li>
-<li><strong>RColorBrewer</strong>: Provides more options for type of colours used for heatmaps</li>
-<li><strong>reshape2</strong>: Converts variable to long/wide format</li>
-<li><strong>RPostgreSQL</strong>: For communication with the database</li>
-<li><strong>shiny</strong>: For shiny server</li>
-<li><strong>shinyBS</strong>: Provides the “bsButton” feature</li>
-<li><strong>shinyjs</strong>: Provides the “hidden” function</li>
-<li><strong>stringr</strong>: Deals with partial selection of a string</li>
-<li><strong>tidyr</strong>: For PCA biplot</li>
-<li><strong>VIM</strong>: Provides the function “kNN” to imput missing values for hierarchical clustering</li>
-<li><strong>XLConnect</strong>: Read xlsx and xlsm files</li>
-<li><strong>XLConnectJars</strong>: Read xlsx and xlsm files</li>
+<li><strong>Load</strong>: Merge the selected studies and brings the user to the <a href="#pre-processing">next page</a>.</li>
+<li><strong>Search</strong>: Display all the results releated to the text inputed in the search box. If nothing is written in it, clicking <strong>Search</strong> displays all the results stored in the database.</li>
 </ul>
 </div>
-<div id="code-architecture" class="section level2">
-<h2>CODE ARCHITECTURE</h2>
-<p>Arithmos follows Shiny’s recommended structural pattern, along with a second layer of file separation for increased organization. Code is loosely split up based on proximity in the UI. The code is comprised of the following files:</p>
+<div id="pre-processing" class="section level2">
+<h2>2 PRE-PROCESSING</h2>
+<p>Process the dataset by filtering away variables and samples that have too many missing values, and removing variables with zero variance.</p>
 <ul>
-<li><strong>server.R</strong>: Server-related code. Since shiny needs ALL non-UI code to be found here, server.R imports all other non-UI files</li>
-<li><strong>complexDatabaseCommunication.R</strong>: Any code involving multi-line database interactions</li>
-<li><strong>helpers.R</strong>: Imports and related helper functions are found</li>
-<li><strong>ui.R</strong>: Code for the UI built through shiny’s custom functions</li>
-<li><strong>server_modules</strong>: Directory containing modules imported into server.R
+<li><p><strong>Note</strong>: Click the <strong>home button</strong> located on the top right hand corner of the left panel to return to the <a href="#start-page">first page</a>.</p></li>
+<li><p><strong>Process</strong>: Process the dataset by removing rows and columns that contain too many missing values. It also displays the pre-processing results on the right.</p>
 <ul>
-<li><strong>startPanel.R</strong>: Code employed by the left-hand panel on the start page of the application, involving uploading files and loading data</li>
-<li><strong>analysisSidebar.R</strong>: Renderings for the sidebar during the analysis phase</li>
-<li><strong>analysisPage.R</strong>: Code for rendering the different analysis</li>
-<li><strong>statisticsTable.R</strong>: Contains all the functions used for statistics table</li>
-<li><strong>statisticsBoxplot.R</strong>: Contains all the functions used for basic boxplot</li>
-<li><strong>statisticsDiffAnal.R</strong>: Contains all the functions used for differntial analysis</li>
-<li><strong>statisticsDiffVizu.R</strong>: Contains all the functions used for vizualization for differential analysis</li>
-<li><strong>correlationTable.R</strong>: Contains all the functions used for correlation and p-value table</li>
-<li><strong>correlationPlot.R</strong>: Contains all the functions used for correlation plot</li>
-<li><strong>correlationSearch.R</strong>: Contains all the functions used for advance correlation search</li>
-<li><strong>pca.R</strong>:Contains all the functions used for PCA</li>
-<li><strong>hc.R</strong>: Contains all the functions used for HC</li>
-<li><strong>mainControl.R</strong>: Contains all the functions used to build the sidebar panel for data analysis</li>
-<li><strong>preProcessing.R</strong>: Contains all the functions used for pre processing</li>
-<li><strong>searchAcross.R</strong>: Code related to searching across projects, the right-hand panel on the main page</li>
+<li><strong>Total number of samples before pre-processing</strong>: Number of rows initially.</li>
+<li><strong>Total number of variables before pre-processing</strong>: Number of columns, excluding subject ID, initially.<br />
+</li>
+<li><strong>Total number of samples after pre-processing</strong>: Number of rows remaining.</li>
+<li><p><strong>Total number of variables after pre-processing</strong>: Number of columns, excluding subject ID, remaining.</p></li>
+<li><strong>ID of samples removed</strong>: List of subject number of samples that are removed.</li>
+<li><strong>Variables</strong>: List of variables removed due to too many missing values.</li>
+<li><p><strong>Constant variables removed</strong>: List of variables removed due to having the same value filling the entire column.</p></li>
 </ul></li>
-<li><strong>www</strong>: Directory containing all front-end code, as required by Shiny
+<li><strong>View dataset</strong>: Display the dataset on the right panel. Also causes the <strong>Download</strong> button to download the dataset instead of the pre-processing results.
 <ul>
-<li><strong>all_css.css</strong>: All CSS is found here. Primarily a theme taken from bootswatch.com. Custom css is found at the beginning</li>
-<li><strong>relative_x_scrolling.js</strong>: A javascript function that keeps the persistent side panel from staying persistent with horizontal scrolling</li>
-<li><strong>switch.js</strong>: A javascript function that controls the UI flow</li>
+<li>Click <strong>Process</strong> again if you want to go back and download the pre-processing results.</li>
 </ul></li>
-<li><strong>misc</strong>: Directory containing miscellaneous files for documentation aid
+<li><strong>Download</strong>: Download the pre-processing results/ dataset.</li>
+<li><p><strong>Proceed</strong>: Brings the user to the <a href="#control-panel">next page</a>.</p></li>
+</ul>
+</div>
+<div id="control-panel" class="section level2">
+<h2>3 CONTROL PANEL</h2>
+<p>The options in the left panel allow the user to choose which variables to be used for the statistical analysis, and to determine which variables are categorical and continuous.</p>
 <ul>
-<li><strong>database_documentation.html</strong>: Database documentation generated by SchemaSpy</li>
-<li><strong>example_study.xlsm</strong>: An example of the exact format required</li>
-<li><strong>smile_parser.py</strong>: The python script used to parse SMILE data</li>
-<li><strong>.schemaspy_output</strong>: Hidden directory containing SchemaSpy output loaded by database_documentation.html</li>
+<li><strong>Note</strong>: Click the <strong>home button</strong> located on the top right hand corner of the left panel to return to the <a href="#start-page">first page</a>.</li>
+<li><strong>Select variables by timepoint</strong>:
+<ul>
+<li><strong>Select timepoint</strong>: Displays all the available timepoints in the list. If no timepoint is selected, the “<strong>Select explanatory variables</strong>” list will only display the demographics variables (variables with timepoint -1).</li>
+<li><strong>Select all variables within the timepoint</strong>: Selects all the variables in the <strong>Select explanatory variables</strong> list.</li>
+</ul></li>
+<li><strong>Select all variables</strong>: Selects all the variables in the <strong>Select explanatory variables</strong> list.</li>
+<li><strong>Select explanatory variables</strong>: Displays all the relevant variables for selection.</li>
+<li><strong>Select categorical explanatory variables</strong>: Determines which variables are considered categorical. <strong>THIS AFFECTS THE TYPE OF STATISTICAL TESTS USED IN THE LATER STAGE</strong>. Variables that have strings filling the entire column are pre-selected.</li>
+<li><strong>Select main function</strong>: Displays all the available statistical analysis.</li>
+</ul>
+<p>Available functions:</p>
+<ul>
+<li><a href="#statistics">Statistics</a></li>
+<li><a href="#correlation">Correlation</a></li>
+<li><a href="#principal-component-analysis">Principal Component Analysis</a></li>
+<li><a href="#hierarchical-clustering">Hierarchical Clustering</a></li>
+</ul>
+</div>
+<div id="statistics" class="section level2">
+<h2>4 STATISTICS</h2>
+<p>Conducts basic statistical analysis and significant tests on the variables and provides the relevant vizualization plots.</p>
+<p>Available sub-functions:</p>
+<ul>
+<li><a href="#statistics-table">Characterization: Table</a></li>
+<li><a href="#boxplot">Vizualization: Boxplot</a></li>
+<li><a href="#differential-analysis">Differential Analysis</a>
+<ul>
+<li><a href="#significant-tests">Significant tests</a></li>
+<li><a href="#vizualization">Vizualization</a></li>
 </ul></li>
 </ul>
 </div>
-<div id="database-architecture" class="section level2">
-<h2>DATABASE ARCHITECTURE</h2>
-<p>The file database_documentation.html in the misc directory contains a summary on the current database structure. This report can answer most questions about the database. All table and column names are self explanatory. Listed below are a few tricky aspects and relationships not outlined in the report:</p>
-<ul>
-<li><strong>igroup</strong> stands for intervention group, as group could not be used because it is a keyword</li>
-<li><strong>study to subject</strong>, <strong>study to igroup</strong>, <strong>study to timepoint</strong> are all in theory <strong>many-to-many</strong> relationships. None of the intermediary tables are defined, as you always query through measurements. The add study script currently needs to watch out for these hidden many-to-many relationships</li>
-<li><strong>study to variable</strong> is in theory <strong>one to many</strong>. A single variable found in multiple studies of the same project may offer problems when merging the studies for analysis</li>
-</ul>
-<p>The code that actually builds the database is found in complexDatabaseCommunication, in the function createDatabase.</p>
+<div id="statistics-table" class="section level2">
+<h2>4.1 STATISTICS TABLE</h2>
+<p>Provides a summary of statistics for the variables. For continuous variables, the table displays the sample size, number of missing values, mean, standard deviation, minimum and maximum value, and the range of the variable. For categorical variable, the table displays the sample size of each subgroup for every categorical variable.</p>
 </div>
-<div id="study-format" class="section level2">
-<h2>STUDY FORMAT</h2>
-<p>As of now, the format of studies that can be uploaded is extremely specific. The file example_study.xlsm in the misc folder is an example of the <strong>exact</strong> format a study must follow. Important qualifications include:</p>
-<ul>
-<li><strong>Everything</strong> must be spelled correctly, capitalization and white-space sensitive</li>
-<li><strong>Subject#, Group, Timepoint (Visit)</strong> must be included in every file</li>
-<li>The study must be an <strong>xlsm</strong> file comprised of two sheets</li>
-<li>The first sheet must be the general information sheet
-<ul>
-<li>It must outline ALL of the visit timings found in the data. Visit must be a number</li>
-<li>Every category that is not defined must be filled in with an NA</li>
-<li>The section order (General information, remarks, visit timings) must be the same</li>
-</ul></li>
-<li>The second sheet must be the data sheet
-<ul>
-<li>The first section (<strong>Analysis remark</strong> to <strong>No sample available</strong>) must be in at the start and each defined for every feature (or NA if not applicable)</li>
-<li>Every variable should have a its full name (or regular if none) outlined above it</li>
-<li>No variables can have units with micro symbol (replace micro with u)</li>
-<li>All Subject#s must be <strong>integers</strong> (ie 302-2 does not work)</li>
-</ul></li>
-</ul>
-<p>In general, if you stick to the given format (which allows for an indiscriminate number of variables), the file should work. With the exception of the actual data cells, you need to have NAs in spots where the study did not define the specific value.</p>
+<div id="boxplot" class="section level2">
+<h2>4.2 BOXPLOT</h2>
+<p>Provides a basic vizualization of the continuous variables. <strong>Only a maximum of 20 variables are allowed to be plotted</strong>. If more than 20 variables are selected, only the first 20 will be plotted.</p>
+<p>If variables are sorted alphabetically, variables starting with symbols such as “%” will be displayed on the top and those starting with letters “z” will be displayed at the bottom.</p>
+<p>If variables are sorted by median, variables with the least median value will be displayed on the top.</p>
 </div>
-<div id="converting-a-study" class="section level2">
-<h2>CONVERTING A STUDY</h2>
-<p>In the misc folder of the repository there is a python script that was used to convert the SMILE data into SDTM format. The script is incomplete, however, because some functions are simply much easier to do manually. The manual steps before the script was run were:</p>
+<div id="differential-analysis" class="section level2">
+<h2>4.3 DIFFERENTIAL ANALYSIS</h2>
+<p>Conducts pairwise significance test based on the outcome of interest. Click on <strong>“Sig Table”</strong> to begin.</p>
+<p>If the “Get Results” button is clicked to display the results table, you have to click the “Get Results” button again to hide the results table <strong>BEFORE SELECTING A NEW OUTCOME OF INTEREST AND DISPLAYING THE SIGNIFICANCE TABLE</strong>, otherwise an error will be generated.</p>
+<p>If the error occurs,</p>
 <ul>
-<li>After every variable name, add the units surrounded by parentheses</li>
-<li>Rename whatever column stood for subject to Subject#</li>
-<li>Rename whatever column stood for group to Group</li>
-<li>Rename whatever column stood for timepoint to Timepoint (Visit)</li>
-<li>Order the files in their own directory to make sure the ones with a Group column were loaded first</li>
-<li>Remove any uneccessary graphs or unorganized data in the tables that would mess up the parser</li>
-<li>Ignore any data that involved no timepoints and multiple measurements of the same column for a single subject</li>
+<li>First, click the “Get Results” button again to hide the results table.</li>
+<li>Next, select a new outcome of interest and click <strong>“Sig Table”</strong>.</li>
+<li>Repeat the previous step with your outcome of interest this time. Click the <strong>“Get Results”</strong> button to display the results table.</li>
 </ul>
-<p>The script places the visit number -1 for static data. After the scripts were run, a couple more steps were performed:</p>
-<ul>
-<li>The units row at the bottom was transported to the top per the SDTM format</li>
-<li>All of the undefined values for variables like protocol, lower limit, etc were added in and given NA values when undefined</li>
-<li>A general information sheet was created, with NAs going in values we did not know</li>
-<li>The names of the variables were copied to the row above them, as per defined in the <a href="#study-format">study formatting</a> section</li>
-</ul>
-<p>In general we just made sure it matched the SDTM format as outlined example_study.xlsm. The script I have included in the misc directory may be useful for converting future studies, but overall we found certain things were significantly easier to do manually than with python. For example, whenever the subject column had a name other than Subject#, it was much easier to convert it manually, as the parser cannot recognize different ways to define subject (SUBJ, subject, subj, etc) without being given terms to look for at the start.</p>
 </div>
-<div id="todo" class="section level2">
-<h2>TODO</h2>
-<p>Improvements looking forward:</p>
+<div id="significant-tests" class="section level2">
+<h2>4.3.1 SIGNIFICANT TESTS</h2>
+<p>Non-parametric tests will be used to conduct the pairwise significance test. The significance table displays the name of variable, the type of variable, number of <strong>non-missing paired</strong> samples, p-value, q-value, rho and rsquared (for continuous outcome and predictor), and the name of the statistical test. The table is sorted by p-values.</p>
+<p>Methods used:</p>
 <ul>
-<li>The biggest challenge facing this project ahead is its ability to only upload very specific studies. Right now the parser is strict, both format and file-type wise. We need either a standard format, or a lenient and complex parser</li>
-<li>The database can still be expanded. It could use trigger functions, views, and perhaps more tables (ie defining those <a href="#database-architecture">phantom many-to-manys</a>)</li>
-<li>The xlsm format appears to encode mu incorrectly, so you must currently change units like micrograms to ug</li>
-<li>The user interface could use a new section where a user could change a previously uploaded value. Right now to correct the database you need to know postgresql and have access</li>
-<li>The current UI pattern for hiding/showing elements based on sections is not sustainable if the app continues to grow. Perhaps modularizing into different Shiny apps is the best next step, because one Shiny app can only be one html page</li>
-<li>Database user security</li>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Spearman’s rank correlation test.</li>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Kruskal Wallis test.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Multinomial logistics regression and likelihood ratio test.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Fisher’s Exact test. <strong>Currently, the test does not consider missing values in the variables</strong>.</li>
 </ul>
+<p>Click on “display directionality table” to display the directional results of the significance test. Results will only show significant variables. Insignifianct variables will display “no significance” in the direction column.</p>
+<ul>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Displays +ve/-ve based on the rho value.</li>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Displays which pair of subgroups are significantly different from each other and their respective sample size. The p value is calculated based on mann whitney u test.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Displays which subgroup is the reference group and the respective change in the log odds of being in that group with respect to the reference group for each unit increase in the predictor, i.e. if the value is positive, it means an increase in 1 unit in the predictor (X) increases the log odds of being in that subgroup relative to the reference group by that amount.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Displays the sample size in each pair of subgroups.</li>
+</ul>
+</div>
+<div id="vizualization" class="section level2">
+<h2>4.3.2 VIZUALIZATION</h2>
+<p>Displays the relevant plots based on the type of variables for the outcome and predictor.</p>
+<ul>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Scatterplot and scatterplot by group.</li>
+<li><strong>Continuous outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Vertical boxplot, boxplot by subgroup and boxplot by timepoint.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Continuous predictor (X)</strong>: Horizontal boxplot, boxplot by subgroup and boxplot by timepoint.</li>
+<li><strong>Categorical outcome (Y)</strong> vs <strong>Categorical predictor (X)</strong>: Barplot.</li>
+</ul>
+<p>For scatterplots, there is an option to display interactivity in the plot, which brings up 2 tables, <strong>Hovered Point</strong> and <strong>Selected Points</strong>.</p>
+<ul>
+<li><strong>Hovered Point</strong>: Display the relevant information of that sample that the mouse is hovering on.</li>
+<li><strong>Selected Points</strong>: Display the relevant information of all samples that the mouse has brushed across the scatterplot.</li>
+</ul>
+</div>
+<div id="correlation" class="section level2">
+<h2>5 CORRELATION</h2>
+<p>Conducts correlation analysis on <strong>continuous variables</strong> and provides the relevant vizualization plots.</p>
+<p><strong>Pearson’s correlation</strong> is more appropriate for variables with normal distribution whereas <strong>Spearman’s correlation</strong> provides a more stringent approach as it does not assume normal distribution.</p>
+<p>Available sub-functions:</p>
+<ul>
+<li><a href="#correlation-table">Table: Correlation and P-Value</a></li>
+<li><a href="#correlation-matrix">Vizualization: Correlation Matrix</a></li>
+<li><a href="#correlation-advanced-search">Advance Search: Significance Table and Scatterplot</a></li>
+</ul>
+</div>
+<div id="correlation-table" class="section level2">
+<h2>5.1 CORRELATION TABLE</h2>
+<p>Provides pairwise correlation and its p-value table.</p>
+</div>
+<div id="correlation-matrix" class="section level2">
+<h2>5.2 CORRELATION MATRIX</h2>
+<p>Provides a triangular correlation plot filled with with a colour gradient. The colour gradient is based on the correlation value.</p>
+<p><strong>The maximum number of variables are allowed in the plot is 15</strong>. If more than 15 variables are selected, only the first 15 will be plotted.</p>
+<p>Select <strong>“Display only significant variables”</strong> to remove text labels for insignificant variables in the plot. The significance threshold level is based on the value entered in <strong>“Imput Significance Level”</strong>.</p>
+</div>
+<div id="correlation-advanced-search" class="section level2">
+<h2>5.3 CORRELATION ADVANCED SEARCH</h2>
+<p>In the previous 2 sections, the correlation analysis is based on all pairwise variables. This section will be more specific, such that it requires the user to select a variable that he/she is interested in, so that the app will run the correlation test with all other continuous variables.</p>
+<p>The table gives a list of significant variables, ordered by p-values, based on the significances threshold level entered in <strong>“Imput Significance Level”</strong>. Enter 1 in <strong>“Imput Significance Level”</strong> to display all the variables. It also displays the number of <strong>non-missing paired</strong> samples, correlation value, p-value and q-value.</p>
+<p>If there are significant variables, users can plot a scatterplot with the significant variables. There is also an option, <strong>“Display by group variable?”</strong>, to choose whether to draw a seperate line of best fit and to give different colours for each subgroup.</p>
+<p>The scatterplot has the interactive function that allows the user to select the samples on the plot. Refer to <a href="#vizualization">here</a> for more information.</p>
+</div>
+<div id="principal-component-analysis" class="section level2">
+<h2>6 PRINCIPAL COMPONENT ANALYSIS</h2>
+<p>Princiapl component analysis generates a biplot which allows us to determine which variables are important in driving the difference, if any, between the clusters in a 2-dimensional plot. If there are differences, the ellipses should not be overlapping one another.</p>
+<p>The missing values are imputed using the <strong>regularized iterative PCA algorithm</strong>.</p>
+<p>Usually, we select PC1 and PC2 on the x-axis and y-axis respectively as they explain the highest proportion of variation among the samples. If PC3 explains similar level of proportion as PC1 and PC2, PC3 could be considered for the biplot too.</p>
+<p>The dots in the graph are coloured differently based on the group selected in <strong>“Select group variable (only categorical variables)”</strong>.</p>
+<p><strong>Currently, only continuous variabels are used for PCA</strong>.</p>
+<p><strong>The maximum number of continuous variable labels that could be displayed is 20</strong>. If more than 20 variables are selected, only the labels of the first 20 variables will be displayed.</p>
+<p>The PCA biplot has the interactive function that allows the user to select the samples on the plot. Refer to <a href="#vizualization">here</a> for more information.</p>
+</div>
+<div id="hierarchical-clustering" class="section level2">
+<h2>7 HIERARCHICAL CLUSTERING</h2>
+<p>Hierarchical clustering clusters similar samples (and variables if the row dendrogram is turned on) together, allowing us to determine if the samples in each group are clearly different from one another.</p>
+<p>The missing values are imputed using the <strong>kth nearest neighbour algorithm</strong>. The distance metric is calculated based on <strong>euclidean distance</strong> and the linkage criteria is <strong>ward</strong>.</p>
+<p>The sample labels are coloured differently based on the group selected in <strong>“Select group variable (only categorical variables)”</strong>.</p>
+<p><strong>Currently, only continuous variables are used for hierarchical clustering</strong>.</p>
+<p><strong>The maximum number of continuous variable labels that could be displayed is 50</strong>. If more than 50 variables are selected, then no labels will be displayed at all, even if the checkbox <strong>“Display Row Dendrogram”</strong> is ticked. <strong>“Display Column Labels”</strong> displays the IDs of the samples.</p>
 </div>
 <div id="credits" class="section level2">
 <h2>CREDITS</h2>

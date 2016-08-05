@@ -1,0 +1,232 @@
+#**ARITHMOS v0.1 USER MANUAL**
+
+CONTENTS OF THIS FILE
+---------------------
+ * [Introduction](#introduction)
+ * [1 Start Page](#start-page)
+ * [2 Pre-Processing](#pre-processing)
+ * [3 Control Panel](control-panel)
+ * [4 Statistics](#statistics)
+     * [4.1 Statistics Table](#statistics-table)
+     * [4.2 Boxplot](#boxplot)
+     * [4.3 Differential Analysis](#differential-analysis)
+         * [4.3.1 Significant tests](#significant-tests)
+         * [4.3.2 Vizualization](#vizualization)
+ * [5 Correlation](#correlation)
+     * [5.1 Correlation Table](#correlation-table)
+     * [5.2 Correlation Matrix](#correlation-matrix)
+     * [5.3 Correlation Advanced Search](#correlation-advanced-search)
+ * [6 Principal Component Analysis](#principal-component-analysis)
+ * [7 Hierarchical Clustering](#hierarchical-clustering)
+ * [Credits](#credits)
+
+INTRODUCTION 
+---------------------
+
+Arithmos is a private statistics tool for Danone Nutricia Research Centre. The goal of the project is to have in-house statistics software built on top of a private database so scientists can run analyses easily and without file manipulation. 
+
+This user manual is intended for end-users of Arithmos. 
+
+1 START PAGE
+---------------------
+
+ * __Load__: Merge the selected studies and brings the user to the [next page](#pre-processing).
+ * __Search__: Display all the results releated to the text inputed in the search box. If nothing is written in it, clicking __Search__ displays all the results stored in the database.
+ 
+2 PRE-PROCESSING
+---------------------
+
+Process the dataset by filtering away variables and samples that have too many missing values, and removing variables with zero variance.
+
+ * __Note__: Click the __home button__ located on the top right hand corner of the left panel to return to the [first page](#start-page).
+
+ * __Process__: Process the dataset by removing rows and columns that contain too many missing values. It also displays the pre-processing results on the right.
+ 
+     *  __Total number of samples before pre-processing__: Number of rows initially.
+     *  __Total number of variables before pre-processing__: Number of columns, excluding subject ID, initially.     
+     *  __Total number of samples after pre-processing__: Number of rows remaining.
+     *  __Total number of variables after pre-processing__: Number of columns, excluding subject ID, remaining.
+     
+     *  __ID of samples removed__: List of subject number of samples that are removed.
+     *  __Variables__: List of variables removed due to too many missing values.
+     *  __Constant variables removed__: List of variables removed due to having the same value filling the entire column.
+     
+ * __View dataset__: Display the dataset on the right panel. Also causes the __Download__ button to download the dataset instead of the pre-processing results.
+      *  Click __Process__ again if you want to go back and download the pre-processing results.
+ * __Download__: Download the pre-processing results/ dataset.
+ * __Proceed__: Brings the user to the [next page](#control-panel).
+
+3 CONTROL PANEL
+---------------------
+
+The options in the left panel allow the user to choose which variables to be used for the statistical analysis, and to determine which variables are categorical and continuous.
+
+  * __Note__: Click the __home button__ located on the top right hand corner of the left panel to return to the [first page](#start-page).
+ * __Select variables by timepoint__:
+     *  __Select timepoint__: Displays all the available timepoints in the list. If no timepoint is selected, the "__Select explanatory variables__" list will only display the demographics variables (variables with timepoint -1).
+     *  __Select all variables within the timepoint__: Selects all the variables in the __Select explanatory variables__ list.
+     
+ * __Select all variables__: Selects all the variables in the __Select explanatory variables__ list.
+ * __Select explanatory variables__: Displays all the relevant variables for selection.
+ * __Select categorical explanatory variables__: Determines which variables are considered categorical. __THIS AFFECTS THE TYPE OF STATISTICAL TESTS USED IN THE LATER STAGE__. Variables that have strings filling the entire column are pre-selected.
+  * __Select main function__: Displays all the available statistical analysis.
+  
+Available functions:
+
+ * [Statistics](#statistics)
+ * [Correlation](#correlation)
+ * [Principal Component Analysis](#principal-component-analysis)
+ * [Hierarchical Clustering](#hierarchical-clustering)
+
+4 STATISTICS
+---------------------
+
+Conducts basic statistical analysis and significant tests on the variables and provides the relevant vizualization plots.
+
+Available sub-functions:
+
+ * [Characterization: Table](#statistics-table)
+ * [Vizualization: Boxplot](#boxplot)
+ * [Differential Analysis](#differential-analysis)
+     * [Significant tests](#significant-tests)
+     * [Vizualization](#vizualization)
+
+4.1 STATISTICS TABLE
+---------------------
+
+Provides a summary of statistics for the variables. For continuous variables, the table displays the sample size, number of missing values, mean, standard deviation, minimum and maximum value, and the range of the variable. For categorical variable, the table displays the sample size of each subgroup for every categorical variable.
+
+4.2 BOXPLOT
+---------------------
+
+Provides a basic vizualization of the continuous variables. __Only a maximum of 20 variables are allowed to be plotted__. If more than 20 variables are selected, only the first 20 will be plotted.
+
+If variables are sorted alphabetically, variables starting with symbols such as "%" will be displayed on the top and those starting with letters "z" will be displayed at the bottom.
+
+If variables are sorted by median, variables with the least median value will be displayed on the top.
+
+4.3 DIFFERENTIAL ANALYSIS
+-------------------------
+
+Conducts pairwise significance test based on the outcome of interest. Click on __"Sig Table"__ to begin.
+
+If the "Get Results" button is clicked to display the results table, you have to click the "Get Results" button again to hide the results table __BEFORE SELECTING A NEW OUTCOME OF INTEREST AND DISPLAYING THE SIGNIFICANCE TABLE__, otherwise an error will be generated. 
+
+If the error occurs, 
+
+ * First, click the "Get Results" button again to hide the results table.
+ * Next, select a new outcome of interest and click __"Sig Table"__.
+ * Repeat the previous step with your outcome of interest this time. Click the __"Get Results"__ button to display the results table.
+
+4.3.1 SIGNIFICANT TESTS
+----------------------- 
+
+Non-parametric tests will be used to conduct the pairwise significance test. The significance table displays the name of variable, the type of variable, number of __non-missing paired__ samples, p-value, q-value, rho and rsquared (for continuous outcome and predictor), and the name of the statistical test. The table is sorted by p-values.
+
+Methods used: 
+
+ * __Continuous outcome (Y)__ vs __Continuous predictor (X)__: Spearman's rank correlation test.
+ * __Continuous outcome (Y)__ vs __Categorical predictor (X)__: Kruskal Wallis test.
+ * __Categorical outcome (Y)__ vs __Continuous predictor (X)__: Multinomial logistics regression and likelihood ratio test. 
+ * __Categorical outcome (Y)__ vs __Categorical predictor (X)__: Fisher's Exact test. __Currently, the test does not consider missing values in the variables__.
+ 
+Click on "display directionality table" to display the directional results of the significance test. Results will only show significant variables. Insignifianct variables will display "no significance" in the direction column.
+
+  * __Continuous outcome (Y)__ vs __Continuous predictor (X)__: Displays +ve/-ve based on the rho value.
+  * __Continuous outcome (Y)__ vs __Categorical predictor (X)__: Displays which pair of subgroups are significantly different from each other and their respective sample size. The p value is calculated based on mann whitney u test.
+  * __Categorical outcome (Y)__ vs __Continuous predictor (X)__: Displays which subgroup is the reference group and the respective change in the log odds of being in that group with respect to the reference group for each unit increase in the predictor, i.e. if the value is positive, it means an increase in 1 unit in the predictor (X) increases the log odds of being in that subgroup relative to the reference group by that amount.
+  * __Categorical outcome (Y)__ vs __Categorical predictor (X)__: Displays the sample size in each pair of subgroups. 
+
+4.3.2 VIZUALIZATION
+------------------- 
+
+Displays the relevant plots based on the type of variables for the outcome and predictor. 
+
+  * __Continuous outcome (Y)__ vs __Continuous predictor (X)__: Scatterplot and scatterplot by group.
+  * __Continuous outcome (Y)__ vs __Categorical predictor (X)__: Vertical boxplot, boxplot by subgroup and boxplot by timepoint.
+  * __Categorical outcome (Y)__ vs __Continuous predictor (X)__: Horizontal boxplot, boxplot by subgroup and boxplot by timepoint.
+  * __Categorical outcome (Y)__ vs __Categorical predictor (X)__: Barplot.
+  
+For scatterplots, there is an option to display interactivity in the plot, which brings up 2 tables, __Hovered Point__ and __Selected Points__. 
+  
+  * __Hovered Point__: Display the relevant information of that sample that the mouse is hovering on.
+  * __Selected Points__: Display the relevant information of all samples that the mouse has brushed across the scatterplot.
+  
+5 CORRELATION
+---------------------
+
+Conducts correlation analysis on __continuous variables__ and provides the relevant vizualization plots.
+
+__Pearson's correlation__ is more appropriate for variables with normal distribution whereas __Spearman's correlation__ provides a more stringent approach as it does not assume normal distribution.
+
+Available sub-functions:
+
+ * [Table: Correlation and P-Value](#correlation-table)
+ * [Vizualization: Correlation Matrix](#correlation-matrix)
+ * [Advance Search: Significance Table and Scatterplot](#correlation-advanced-search)
+
+5.1 CORRELATION TABLE
+----------------------
+
+Provides pairwise correlation and its p-value table.
+
+5.2 CORRELATION MATRIX
+----------------------
+
+Provides a triangular correlation plot filled with with a colour gradient. The colour gradient is based on the correlation value. 
+
+__The maximum number of variables are allowed in the plot is 15__. If more than 15 variables are selected, only the first 15 will be plotted. 
+
+Select __"Display only significant variables "__ to remove text labels for insignificant variables in the plot. The significance threshold level is based on the value entered in __"Imput Significance Level"__.
+
+5.3 CORRELATION ADVANCED SEARCH
+-------------------------------
+
+In the previous 2 sections, the correlation analysis is based on all pairwise variables. This section will be more specific, such that it requires the user to select a variable that he/she is interested in, so that the app will run the correlation test with all other continuous variables.
+
+The table gives a list of significant variables, ordered by p-values, based on the significances threshold level entered in __"Imput Significance Level"__. Enter 1 in __"Imput Significance Level"__ to display all the variables. It also displays the number of __non-missing paired__ samples, correlation value, p-value and q-value.
+
+If there are significant variables, users can plot a scatterplot with the significant variables. There is also an option, __"Display by group variable?"__, to choose whether to draw a seperate line of best fit and to give different colours for each subgroup.
+
+The scatterplot has the interactive function that allows the user to select the samples on the plot. Refer to [here](#vizualization) for more information.
+
+6 PRINCIPAL COMPONENT ANALYSIS
+------------------------------
+
+Princiapl component analysis generates a biplot which allows us to determine which variables are important in driving the difference, if any, between the clusters in a 2-dimensional plot. If there are differences, the ellipses should not be overlapping one another.
+
+The missing values are imputed using the __regularized iterative PCA algorithm__.
+
+Usually, we select PC1 and PC2 on the x-axis and y-axis respectively as they explain the highest proportion of variation among the samples. If PC3 explains similar level of proportion as PC1 and PC2, PC3 could be considered for the biplot too.
+
+The dots in the graph are coloured differently based on the group selected in __"Select group variable (only categorical variables)"__.
+
+__Currently, only continuous variabels are used for PCA__.
+
+__The maximum number of continuous variable labels that could be displayed is 20__. If more than 20 variables are selected, only the labels of the first 20 variables will be displayed.
+
+The PCA biplot has the interactive function that allows the user to select the samples on the plot. Refer to [here](#vizualization) for more information.
+
+7 HIERARCHICAL CLUSTERING
+-------------------------
+
+Hierarchical clustering clusters similar samples (and variables if the row dendrogram is turned on) together, allowing us to determine if the samples in each group are clearly different from one another.
+
+The missing values are imputed using the __kth nearest neighbour algorithm__. The distance metric is calculated based on __euclidean distance__ and the linkage criteria is __ward__.
+
+The sample labels are coloured differently based on the group selected in __"Select group variable (only categorical variables)"__.
+
+__Currently, only continuous variables are used for hierarchical clustering__.
+
+__The maximum number of continuous variable labels that could be displayed is 50__. If more than 50 variables are selected, then no labels will be displayed at all, even if the checkbox __"Display Row Dendrogram"__ is ticked. __"Display Column Labels"__ displays the IDs of the samples.
+
+CREDITS
+---------------------
+
+Arithmos v0.1 was built by interns Gabriel Gardner and Alfrad Chew, overseen by Mei Lyn Ong of the Immunology team at the Singapore R&D center for Danone Nutricia. Contact info follows:
+
+ * __Gabriel Gardner__: Database Designer
+    * gabrielgardner@icloud.com
+    * Former employee
+ * __Alfrad Chew__: Statistician
+    * cswa_1992@hotmail.com 

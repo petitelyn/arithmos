@@ -47,7 +47,7 @@ output$subsubfunction <- renderUI({
 
 output$uiExample2 <- renderUI({
   tipify(bsButton("pB2", "Help", icon=icon("question-circle"),  size = "extra-small"),
-         "Unlike pearson correlation, spearman correlation is more resistant to outliers.",
+         "Unlike pearson correlation, spearman correlation does not assume the variable follows a normal distribution.",
          placement = "right")
 })
 

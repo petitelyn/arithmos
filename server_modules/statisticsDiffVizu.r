@@ -293,7 +293,7 @@ makePlot1.3.2.3.2 <- reactive({
       #to give a different colour for each group
       p <- ggplot(df, aes(variable, value, fill = Group)) + 
         
-        #Gives a fixed width for each boxplotv
+        #Gives a fixed width for each boxplot
         geom_boxplot(width = (0.15 * length(colnames(variable)))) + 
         
         #Adjustments of theme for the boxplot
@@ -648,7 +648,9 @@ output$lst1.3.2.3 <- renderUI({
             br(),
             
             uiOutput("title1.3.2.3"),
-            radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
+            uiOutput("plotType1.3.2.3"),
+            uiOutput("text1.3.2.3"),
+            #radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
             uiOutput("group1.3.2.3"),
             textInput("main1.3.2.3", "Key in the title of plot"),
             plotOutput("plot1.3.2.3.2",height = "600px"),
@@ -661,7 +663,9 @@ output$lst1.3.2.3 <- renderUI({
             br(),
             
             uiOutput("title1.3.2.3"),
-            radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
+            uiOutput("plotType1.3.2.3"),
+            uiOutput("text1.3.2.3"),
+            #radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T),
             uiOutput("group1.3.2.3"),
             textInput("main1.3.2.3", "Key in the title of plot"),
             plotOutput("plot1.3.2.3.2",height = "600px"),
@@ -670,6 +674,25 @@ output$lst1.3.2.3 <- renderUI({
   }
   else{
     return()
+  }
+})
+
+output$plotType1.3.2.3 <- renderUI({
+  dataset <- selec_var()[[1]]
+  variable <- dataset[,gsub("_.*","",colnames(dataset)) %in% gsub("_.*","",input$select1.3.2),drop = FALSE]
+  if(length(colnames(variable)) == 1){
+    radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1), selected = 1, inline = T)
+  }
+  else if(length(colnames(variable)) > 1){
+    radioButtons("plottype1.3.2.3", NULL, choices = c("Boxplot by subgroup" = 1, "Boxplot by timepoint" = 2), selected = 2, inline = T)
+  }
+})
+
+output$text1.3.2.3 <- renderUI({
+  dataset <- selec_var()[[1]]
+  variable <- dataset[,gsub("_.*","",colnames(dataset)) %in% gsub("_.*","",input$select1.3.2),drop = FALSE]
+  if(length(colnames(variable)) == 1){
+    helpText("Number of timepoint is 1. Hence there will be no option to display boxplot by timepoint.")
   }
 })
 

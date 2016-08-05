@@ -171,7 +171,11 @@ makeText3.2 <- function(){
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
-  var.pca <- prcomp(na.omit(variable), center = TRUE, scale. = TRUE) 
+  if(length(colnames(variable)) == 2){
+    variable <- imputePCA(variable, ncp = 1, scale = TRUE, method = "Regularized")$completeObs
+  }
+  
+  var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
   
   info <- summary(var.pca)
   eigen <- info[[1]]^2
@@ -212,14 +216,10 @@ makePlot3 <- function(text_size,disa=T,vari=NULL){
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
-  if(length(colnames(variable)) <= 2){
-    variable <- cbind(group1,variable)
-    variable <- na.omit(variable)
-    group1 <<- variable[,1]
-    variable <- variable[-1]
+  if(length(colnames(variable)) == 2){
+    variable <- imputePCA(variable, ncp = 1, scale = TRUE, method = "Regularized")$completeObs
   }
 
-  
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
   
   g <- ggbiplot(var.pca, varname.size = 3, obs.scale = 1, var.scale = 1, vari = vari,
@@ -255,11 +255,8 @@ makePCAdf <- function(){
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
-  if(length(colnames(variable)) <= 2){
-    variable <- cbind(group1,variable)
-    variable <- na.omit(variable)
-    group1 <<- variable[,1]
-    variable <- variable[-1]
+  if(length(colnames(variable)) == 2){
+    variable <- imputePCA(variable, ncp = 1, scale = TRUE, method = "Regularized")$completeObs
   }
   
   
@@ -627,12 +624,8 @@ output$hover_info3 <- renderPrint({
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
-  if(length(colnames(variable)) <= 2){
-    variable <- cbind(nam,group,variable)
-    variable <- na.omit(variable)
-    nam <- variable[,1]
-    group <- variable[,2]
-    variable <- variable[-c(1:2)]
+  if(length(colnames(variable)) == 2){
+    variable <- imputePCA(variable, ncp = 1, scale = TRUE, method = "Regularized")$completeObs
   }
   
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
@@ -660,12 +653,8 @@ output$brush_info3 <- renderPrint({
     variable <- imputePCA(variable, ncp = 2, scale = TRUE, method = "Regularized")$completeObs
   }
   
-  if(length(colnames(variable)) <= 2){
-    variable <- cbind(nam,group,variable)
-    variable <- na.omit(variable)
-    nam <- variable[,1]
-    group <- variable[,2]
-    variable <- variable[-c(1:2)]
+  if(length(colnames(variable)) == 2){
+    variable <- imputePCA(variable, ncp = 1, scale = TRUE, method = "Regularized")$completeObs
   }
   
   var.pca <- prcomp(variable, center = TRUE, scale. = TRUE) 
