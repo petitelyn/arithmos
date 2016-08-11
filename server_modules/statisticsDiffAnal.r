@@ -88,9 +88,7 @@ makeTable1.3.1 <- reactive({
         
           v_char <- as.character(v[,1])
           v_char[v_char == "NA"] <- NA
-          varInterest_char <- as.character(varInterest[,1])
-          varInterest_char[varInterest_char == "NA"] <- NA
-          n <- c(n, length(na.omit(cbind(varInterest_char,v_char))[,1]))
+          n <- c(n, length(na.omit(cbind(varInterest,v_char))[,1]))
           incProgress(1/n1)
         }
     
@@ -146,7 +144,10 @@ makeTable1.3.1 <- reactive({
         
           v_char <- as.character(v[,1])
           v_char[v_char == "NA"] <- NA
-          n <- c(n, length(na.omit(cbind(varInterest,v_char))[,1]))
+          varInterest_char <- as.character(varInterest[,1])
+          varInterest_char[varInterest_char == "NA"] <- NA
+          
+          n <- c(n, length(na.omit(cbind(varInterest_char,v_char))[,1]))
           incProgress(1/n1)
         }
     
