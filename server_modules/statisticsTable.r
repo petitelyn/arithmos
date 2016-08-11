@@ -191,7 +191,7 @@ output$downloadData1.1 <- downloadHandler(
       d[10,1] <- NA
       
       colnames(d) <- rep("", length(colnames(d)))
-      write.csv(selec_var()[[1]], file,na="",row.names=F)
+      write.csv(d, file,na="",row.names=F)
     }
     
     else if(input$select1.1 == 2){

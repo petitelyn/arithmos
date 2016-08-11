@@ -103,7 +103,8 @@ makeText2.3.2 <- reactive({
 makePlot2.3 <- function(text_size){
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
-  variable <- variable[,colnames(variable) %in% c(input$choose_variable_2.3.2, input$choose_variable_2.3.3),drop = FALSE]
+  variable <- cbind(variable[,colnames(variable) %in% input$choose_variable_2.3.2,drop = FALSE],
+                    variable[,colnames(variable) %in% input$choose_variable_2.3.3,drop = FALSE])
   ID <- values$data[,1,drop = F]
   
   if(input$type2.3.1 == 1){
