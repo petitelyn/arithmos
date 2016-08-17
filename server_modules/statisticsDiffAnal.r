@@ -56,8 +56,8 @@ makeTable1.3.1 <- reactive({
           r_squared <- c(r_squared, (a$estimate)^2)
           p_value <- c(p_value, a$p.value)
           method <- c(method,"Spearman's rank correlation test")
-          rho[is.na(rho)] <- 0
-          r_squared[is.na(r_squared)] <- 0
+          #rho[is.na(rho)] <- 0
+          #r_squared[is.na(r_squared)] <- 0
           incProgress(1/n1)
         }
         
