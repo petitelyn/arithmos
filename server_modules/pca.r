@@ -207,8 +207,9 @@ helpText3.1 <- function(){
 makePlot3 <- function(text_size,disa=T,vari=NULL){
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
+
   group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
-  
+
   rownames(variable) <- values$data[,1]
   
   #Imputes missing values for PCA
@@ -247,7 +248,9 @@ makePlot3 <- function(text_size,disa=T,vari=NULL){
 makePCAdf <- function(){
   variable <- selec_var()[[1]]
   group <- selec_var()[[2]]
+
   group1 <<- group[,which(colnames(group) %in% input$choose_group3)]
+
   rownames(variable) <- values$data[,1]
   
   #Imputes missing values for PCA

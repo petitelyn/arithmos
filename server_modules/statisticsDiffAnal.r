@@ -211,9 +211,11 @@ makeTable1.3.2 <- reactive({
             varX <- group[,colnames(group) %in% df$Variable[i]]
             varY <- dataset[,colnames(dataset) %in% input$var_interest]
             df1 <- data.frame(varX,varY)
+            df1 <- na.omit(df1)
             
             #Pairwise U test
             top <- lapply(colnames(df1)[-1],function(x) test.fun(df1,x))[[1]]
+            top <- na.omit(top)
             top <- top[top$PValue < 0.05,]
             
             #Provides a summary of statistics for each subgroup
@@ -269,6 +271,12 @@ makeTable1.3.2 <- reactive({
           if(df$Type[i] == "Continuous"){
             varX <- dataset[,colnames(dataset) %in% df$Variable[i]]
             varY <- group[,colnames(group) %in% input$var_interest]
+            
+            df2 <- data.frame(varX,varY)
+            df2 <- na.omit(df2)
+            varX <- df2[,1]
+            varY <- as.factor(df2[,2])
+            
             #varY <- as.character(varY)
             if(length(unique(varY)) == 2){
               
