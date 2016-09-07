@@ -295,14 +295,14 @@ makeTable1.3.2 <- reactive({
             n <- length(rownames(df1))
             
             if(n == 0){
-              df1[2] <- round(df1[2],3)
+              df1[2] <- round(df1[2],5)
               text1 <- paste("Reference group: ", unique(varY)[1], ". ", sep = "")
               text2 <- paste("(",unique(varY)[2],", ",df1[2], ")",sep="")
               direc <- c(direc,paste(text1, text2, sep=""))
               incProgress(1/length(df[,1]))
             }
             if(n != 0){
-              df1[,2] <- round(df1[,2],3)
+              df1[,2] <- round(df1[,2],5)
               text1 <- paste("Reference group: ", reference, ". ", sep = "")
               
               a <- paste("(",rownames(df1),", ",df1[,2], ")",sep="")
@@ -323,7 +323,7 @@ makeTable1.3.2 <- reactive({
             # direc <- c(direc,paste(text1, text2, sep=""))
           }
           else{
-            #Directionality for Y(Categorical) vs X(Continuous), Boxplot
+            #Directionality for Y(Categorical) vs X(Categorical), Barplot
             varX <- group[,colnames(group) %in% df$Variable[i]]
             varY <- group[,colnames(group) %in% input$var_interest]
             varX <- as.character(varX)
